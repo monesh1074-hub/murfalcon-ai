@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #09090b;
+  color: #fff;
+  min-height: 100vh;
+}
+
+/* Glassmorphism + Neon */
+.glass {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  backdrop-filter: blur(16px);
+}
+
+.neon-glow {
+  box-shadow: 0 0 25px #A855F7,
+              0 0 40px #22D3EE;
+}
+
+.mic-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Animated background dots */
+.dot-bg {
+  background-image: 
+    radial-gradient(circle at 25px 25px, #A855F7 1px, transparent 0),
+    radial-gradient(circle at 75px 75px, #22D3EE 1px, transparent 0);
+  background-size: 80px 80px;
+  opacity: 0.15;
+}
