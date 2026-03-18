@@ -25,7 +25,7 @@ app.use(
   cors({
     origin: [
     'http://localhost:5173',
-    'https://murfalcon-ai-g7od-git-main-monesh1074-hubs-projects.vercel.app/'   // ← add this
+    'https://murfalcon-ai-2.onrender.com/'   // ← add this
   ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
