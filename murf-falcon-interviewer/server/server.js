@@ -23,7 +23,10 @@ app.use(helmet());
 // CORS
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'https://murfalcon-ai-g7od.vercel.app/',
+    origin: [
+    'http://localhost:5173',
+    'https://murfalcon-ai-g7od-git-main-monesh1074-hubs-projects.vercel.app/'   // ← add this
+  ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
