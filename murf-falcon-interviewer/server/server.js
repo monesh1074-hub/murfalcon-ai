@@ -23,7 +23,7 @@ app.use(helmet());
 // CORS
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'https://murfalcon-ai-ten.vercel.app/',
+    origin: process.env.CLIENT_URL || 'https://murfalcon-ai-g7od.vercel.app/',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
