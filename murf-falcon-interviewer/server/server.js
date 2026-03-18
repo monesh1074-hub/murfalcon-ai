@@ -75,8 +75,8 @@ app.use(errorHandler);
 // Start
 async function startServer() {
   await testConnection();
-
-  app.listen(PORT, () => {
+ const PORT = process.env.PORT || 5000;
+  app.listen(PORT,'0.0.0.0', () => {
     console.log('');
     console.log('🚀 ═══════════════════════════════════════════');
     console.log('   MURF FALCON INTERVIEWER API');
@@ -88,6 +88,8 @@ async function startServer() {
     console.log(`   OpenAI:      ${process.env.OPENAI_API_KEY ? '✅ Configured' : '❌ Not set'}`);
     console.log('═══════════════════════════════════════════════');
     console.log('');
+    console.log(`Server running on port ${PORT}`)
+    console.log(`Render URL: http://0.0.0.0:${PORT}`)
   });
 }
 
