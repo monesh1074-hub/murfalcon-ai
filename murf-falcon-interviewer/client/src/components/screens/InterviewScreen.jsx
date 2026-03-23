@@ -95,12 +95,12 @@ export default function InterviewScreen() {
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-zinc-950">
-      <div className="flex h-[calc(100vh-80px)]">
+      <div className="flex h-[calc(100vh-80px)] w-full overflow-hidden">
         <LeftPanel />
 
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
-          <div className="bg-zinc-900 border-b border-zinc-800 px-8 py-5 flex items-center justify-between">
+          <div className="bg-zinc-900 border-b border-zinc-800 px-4 md:px-8 py-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-x-4">
               <div className="w-9 h-9 bg-violet-600 rounded-2xl flex items-center justify-center text-xl">🤖</div>
               <div>
@@ -112,7 +112,15 @@ export default function InterviewScreen() {
               </div>
             </div>
 
-            {(isSpeaking || chat.isSpeakingMurf) && <Waveform />}
+            <div className="flex items-center gap-3">
+              {(isSpeaking || chat.isSpeakingMurf) && <Waveform />}
+              <button
+                onClick={endInterview}
+                className="md:hidden cursor-pointer bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-x-2 transition"
+              >
+                <i className="fas fa-times" /> END
+              </button>
+            </div>
           </div>
 
           <ChatArea />

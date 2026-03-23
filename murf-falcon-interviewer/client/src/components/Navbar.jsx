@@ -7,7 +7,7 @@ export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
 
   return (
-    <nav className="bg-zinc-900 border-b border-zinc-800 px-8 py-5 flex items-center justify-between sticky top-0 z-50">
+    <nav className="bg-zinc-900 border-b border-zinc-800 px-4 md:px-8 py-4 md:py-5 flex items-center justify-between sticky top-0 z-50">
       {/* Logo */}
       <div
         className="flex items-center gap-x-3 cursor-pointer"
@@ -27,7 +27,7 @@ export default function Navbar() {
       </div>
 
       {/* Nav Links */}
-      <div className="flex items-center gap-x-8 text-sm font-medium">
+      <div className="hidden md:flex items-center gap-x-8 text-sm font-medium">
         <button
           onClick={() => setScreen('home')}
           className="hover:text-violet-400 transition-colors"

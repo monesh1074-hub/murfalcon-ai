@@ -8,7 +8,7 @@ export default function LeftPanel() {
   const pct = (current / total) * 100;
 
   return (
-    <div className="w-80 bg-zinc-900 border-r border-zinc-800 p-8 flex flex-col">
+    <div className="w-80 bg-zinc-900 border-r border-zinc-800 p-8 hidden md:flex flex-col">
       <div className="flex items-center justify-between mb-8">
         <div>
           <div className="text-xs font-mono text-zinc-400">CURRENT ROLE</div>

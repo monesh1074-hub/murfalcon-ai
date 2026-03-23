@@ -46,18 +46,18 @@ export default function SelectionScreen() {
   return (
     <div className="min-h-[calc(100vh-80px)] px-8 py-12 bg-gradient-to-b from-zinc-950 to-black">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-6xl font-bold logo-font tracking-tighter text-center mb-3">
+        <h2 className="text-4xl md:text-6xl font-bold logo-font tracking-tighter text-center mb-3">
           Choose Your Interview
         </h2>
-        <p className="text-zinc-400 text-xl text-center mb-12">
+        <p className="text-zinc-400 text-lg md:text-xl text-center mb-12">
           Customize voice, difficulty & length
         </p>
 
         {/* Controls - Voice + Difficulty + Duration */}
-        <div className="flex flex-wrap justify-center gap-8 mb-16">
+        <div className="flex flex-wrap justify-center gap-4 md:gap-8 mb-16">
           {/* Voice */}
-          <div className="glass px-8 py-5 rounded-3xl flex items-center gap-4">
-            <span className="text-sm font-medium text-zinc-400">Voice:</span>
+          <div className="glass px-6 py-4 md:px-8 md:py-5 rounded-3xl flex flex-wrap items-center justify-center gap-2 md:gap-4">
+            <span className="text-sm font-medium text-zinc-400 w-full text-center md:w-auto md:text-left">Voice:</span>
             {['Natalie', 'Matthew', 'Terrell'].map((v) => (
               <button
                 key={v}
@@ -74,8 +74,8 @@ export default function SelectionScreen() {
           </div>
 
           {/* Difficulty */}
-          <div className="glass px-8 py-5 rounded-3xl flex items-center gap-4">
-            <span className="text-sm font-medium text-zinc-400">Difficulty:</span>
+          <div className="glass px-6 py-4 md:px-8 md:py-5 rounded-3xl flex flex-wrap items-center justify-center gap-2 md:gap-4">
+            <span className="text-sm font-medium text-zinc-400 w-full text-center md:w-auto md:text-left">Difficulty:</span>
             {['Easy', 'Medium', 'Hard'].map((d) => (
               <button
                 key={d}
@@ -92,8 +92,8 @@ export default function SelectionScreen() {
           </div>
 
           {/* Duration */}
-          <div className="glass px-8 py-5 rounded-3xl flex items-center gap-4">
-            <span className="text-sm font-medium text-zinc-400">Duration:</span>
+          <div className="glass px-6 py-4 md:px-8 md:py-5 rounded-3xl flex flex-wrap items-center justify-center gap-2 md:gap-4">
+            <span className="text-sm font-medium text-zinc-400 w-full text-center md:w-auto md:text-left">Duration:</span>
             {[5, 10, 15].map((min) => (
               <button
                 key={min}

@@ -18,18 +18,18 @@ export default function ScorecardScreen() {
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-zinc-950 flex items-center justify-center px-8">
-      <div className="max-w-2xl w-full bg-zinc-900 rounded-3xl p-12">
+      <div className="max-w-2xl w-full bg-zinc-900 rounded-3xl p-6 md:p-12">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-24 h-24 bg-emerald-500/10 rounded-full text-6xl mb-6">
+          <div className="inline-flex items-center justify-center w-20 h-20 md:w-24 md:h-24 bg-emerald-500/10 rounded-full text-5xl md:text-6xl mb-6">
             🏆
           </div>
-          <h2 className="text-5xl font-bold logo-font">Interview Complete!</h2>
-          <div className="text-7xl font-bold text-violet-400 mt-2">{scores.overall}</div>
-          <div className="text-zinc-400">Overall Score (AI-Evaluated)</div>
+          <h2 className="text-3xl md:text-5xl font-bold logo-font">Interview Complete!</h2>
+          <div className="text-5xl md:text-7xl font-bold text-violet-400 mt-2">{scores.overall}</div>
+          <div className="text-zinc-400 text-sm md:text-base mt-2">Overall Score (AI-Evaluated)</div>
         </div>
 
-        <div className="grid grid-cols-2 gap-8">
-          <div className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-6 md:space-y-8">
             {bars.map((bar) => (
               <div key={bar.label}>
                 <div className="flex justify-between text-sm mb-3">
