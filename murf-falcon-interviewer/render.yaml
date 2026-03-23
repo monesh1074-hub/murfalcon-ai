@@ -1,0 +1,30 @@
+services:
+  # Backend API
+  - type: web
+    name: murf-interviewer-api
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: CLIENT_URL
+        value: https://murf-interviewer-client.onrender.com
+      # You will need to add these secret environment variables in your Render Dashboard manually:
+      # - SUPABASE_URL
+      # - SUPABASE_ANON_KEY
+      # - JWT_SECRET
+      # - MURF_API_KEY
+      # - GEMINI_API_KEY (or OPENAI_API_KEY)
+
+  # Frontend React App
+  - type: web
+    name: murf-interviewer-client
+    env: static
+    rootDir: client
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://murf-interviewer-api.onrender.com/api
