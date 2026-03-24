@@ -71,7 +71,7 @@ export default function HomeScreen() {
             onClick={() => window.open('https://youtu.be/EQ3IYVbyVmc', '_blank')}
             className="glass w-full md:w-auto px-8 py-4 md:px-10 md:py-7 rounded-3xl text-lg md:text-xl font-medium border border-white/20 hover:border-white/40 transition-all flex items-center justify-center gap-3"
           >
-            Watch 60s Demo
+            Watch Tutorial
           </button>
         </div>
 
