@@ -1,9 +1,12 @@
+// client/src/components/auth/LoginScreen.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useApp } from '../../context/AppContext'; // Import AppContext for routing
 import AuthLayout from './AuthLayout';
 
 export default function LoginScreen({ onSwitchToSignup }) {
   const { login, error, setError } = useAuth();
+  const { setScreen } = useApp() || {}; // Extract routing logic
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -15,9 +18,13 @@ export default function LoginScreen({ onSwitchToSignup }) {
     setError(null);
 
     const result = await login(email, password);
+    
+    // Always stop the loading state immediately after the request resolves
+    setIsLoading(false);
 
-    if (!result.success) {
-      setIsLoading(false);
+    if (result.success) {
+      // Redirect to the main application Gateway immediately upon verification
+      if (setScreen) setScreen('selection');
     }
   };
 
@@ -82,12 +89,12 @@ export default function LoginScreen({ onSwitchToSignup }) {
           type="submit"
           disabled={isLoading}
           className="w-full bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 disabled:cursor-not-allowed 
-                     py-4 rounded-2xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                     py-4 rounded-2xl text-sm font-semibold transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(168,85,247,0.4)]"
         >
           {isLoading ? (
             <>
               <i className="fas fa-spinner fa-spin" />
-              Signing in...
+              Authenticating...
             </>
           ) : (
             <>

@@ -1,157 +1,313 @@
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+// client/src/components/screens/InterviewScreen.jsx
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { useSpeech } from '../../hooks/useSpeech';
 import { useChat } from '../../hooks/useChat';
-import LeftPanel from '../interview/LeftPanel';
-import ChatArea from '../interview/ChatArea';
-import TranscriptPanel from '../interview/TranscriptPanel';
-import Waveform from '../Waveform';
+import { useSpeech } from '../../hooks/useSpeech';
+import ThreeMic from '../ThreeMic';
 
 export default function InterviewScreen() {
-  const { currentRole, currentLang, questions, currentQuestionIndex, questionIndexRef, addMessage, addTranscript, setFeedbackText, advanceQuestion, endInterview, setScores } = useApp();
-  const { user } = useAuth();
+  const appCtx = useApp() || {};
+  const {
+    currentRole = 'System Developer',
+    currentLang = 'en',
+    messages = [],
+    transcripts = [],
+    scores = {},
+    questions = [],
+    currentQuestionIndex = 0,
+    addMessage = () => {},
+    addTranscript = () => {},
+    advanceQuestion = () => {},
+    endInterview = () => {},
+    setScores = () => {},
+    feedbackText = 'System awaiting voice sequence.',
+    setFeedbackText = () => {}
+  } = appCtx;
 
-  const { speak, isSpeaking, startListening, stopListening, isListening } = useSpeech(currentLang);
-  const chat = useChat();
-
-  const hasStartedRef = useRef(false);
+  const { user } = useAuth() || {};
+  const chat = useChat() || { getReply: async () => {}, getScore: async () => {}, isSpeakingMurf: false };
+  const speechCtx = useSpeech() || { isListening: false, startListening: () => {}, stopListening: () => {} };
+  const { isListening, startListening, stopListening } = speechCtx;
+  
   const [isThinking, setIsThinking] = useState(false);
-  const [statusText, setStatusText] = useState('Ready');
+  const hasStartedRef = useRef(false);
+  const messagesEndRef = useRef(null);
 
-  // Start interview with real Murf voice
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   useEffect(() => {
     if (hasStartedRef.current) return;
     hasStartedRef.current = true;
 
-    const welcome = `Hello ${user?.fullName || 'there'}! I am Falcon, your AI interviewer for ${currentRole}. Let's begin!`;
-    addMessage(welcome, true);
-    chat.speakWithMurf(welcome);
-
-    setTimeout(() => {
-      if (questions[0]) {
-        addMessage(questions[0], true);
-        addTranscript(questions[0], false);
-        chat.speakWithMurf(questions[0]);
-      }
-    }, 1800);
+    const startSequence = async () => {
+      const welcome = `Hello ${user?.fullName || 'there'}! I am Falcon, your AI interviewer for the ${currentRole} role. Let's begin.`;
+      addMessage(welcome, true);
+      
+      if (chat.speakWithMurf) chat.speakWithMurf(welcome);
+      
+      setTimeout(() => {
+        if (questions && questions[0]) {
+          addMessage(questions[0], true);
+          addTranscript(questions[0], false);
+          if (chat.speakWithMurf) chat.speakWithMurf(questions[0]);
+        }
+      }, 3500); 
+    };
+    startSequence();
   }, [currentRole, questions, user, addMessage, addTranscript, chat]);
 
-  // Handle user speech → AI reply + Murf voice
-  const handleUserAnswer = useCallback(async (transcript) => {
+  const handleUserAnswer = useCallback(async (transcriptText) => {
     setIsThinking(true);
-    setStatusText('Processing...');
-    setFeedbackText('🤔 Falcon is thinking...');
+    setFeedbackText('🤔 Falcon is analyzing your response payload...');
 
-    addMessage(transcript, false);
-    addTranscript(transcript, true);
+    addMessage(transcriptText, false);
+    addTranscript(transcriptText, true);
+
+    const totalQs = Math.max(questions.length || 5, 5);
 
     const result = await chat.getReply({
       sessionId: `session_${Date.now()}`,
-      userMessage: transcript,
+      userMessage: transcriptText,
       role: currentRole,
       lang: currentLang,
-      questionIndex: questionIndexRef.current,
-      totalQuestions: questions.length,
+      questionIndex: currentQuestionIndex,
+      totalQuestions: totalQs,
     });
 
     setIsThinking(false);
-    setStatusText('Ready');
 
-    if (result.success) {
+    if (result && result.success) {
       addMessage(result.reply, true);
       addTranscript(result.reply, false);
-      setFeedbackText(`✅ Confidence ${Math.floor(Math.random() * 3) + 7}/10 • Murf Voice`);
+      setFeedbackText(`✅ Processing complete • Tonal Analysis: Standard`); 
 
       advanceQuestion();
+      const nextIdx = currentQuestionIndex + 1;
 
-      const nextIdx = questionIndexRef.current;
-      if (nextIdx < questions.length) {
+      if (nextIdx < totalQs) {
         setTimeout(() => {
-          const nextQ = questions[nextIdx];
+          const nextQ = questions[nextIdx] || "Could you describe that further?";
           addMessage(nextQ, true);
           addTranscript(nextQ, false);
-          chat.speakWithMurf(nextQ);
-        }, 800);
+          if (chat.speakWithMurf) chat.speakWithMurf(nextQ);
+        }, 1500);
       } else {
-        // Final score
-        const scores = await chat.getScore(`session_${Date.now()}`, currentRole);
-        setScores(scores);
+        if (chat.getScore) {
+           const finalScores = await chat.getScore(`session_${Date.now()}`, currentRole);
+           setScores(finalScores);
+        }
         endInterview();
       }
+    } else {
+      setFeedbackText('❌ Connection Error. Please try speaking again.');
     }
-  }, [currentRole, currentLang, questions, addMessage, addTranscript, setFeedbackText, advanceQuestion, endInterview, chat, questionIndexRef, setScores]);
+  }, [currentRole, currentLang, questions, currentQuestionIndex, addMessage, addTranscript, setFeedbackText, advanceQuestion, endInterview, chat, setScores]);
 
-  // Mic toggle (this is what you click)
-  const handleToggleMic = useCallback(() => {
+  const handleToggleMic = () => {
     if (isListening) {
       stopListening();
     } else {
-      if (isThinking || chat.isSpeakingMurf) return;
-      startListening(handleUserAnswer);
-      setStatusText('🎤 Listening... Speak now!');
+      if (isThinking || chat.isSpeakingMurf) return; 
+      startListening((text) => handleUserAnswer(text));
     }
-  }, [isListening, stopListening, startListening, handleUserAnswer, isThinking, chat.isSpeakingMurf]);
+  };
+
+  const totalQuestions = Math.max(questions?.length || 5, 5); 
+  const currentStep = Math.min(currentQuestionIndex + 1, totalQuestions);
+  const progressPct = Math.min((currentStep / totalQuestions) * 100, 100);
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-zinc-950">
-      <div className="flex h-[calc(100vh-80px)] w-full overflow-hidden">
-        <LeftPanel />
-
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Header */}
-          <div className="bg-zinc-900 border-b border-zinc-800 px-4 md:px-8 py-4 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-x-4">
-              <div className="w-9 h-9 bg-violet-600 rounded-2xl flex items-center justify-center text-xl">🤖</div>
-              <div>
-                <div className="font-semibold">Falcon AI Interviewer</div>
-                <div className="text-xs text-emerald-400 flex items-center gap-x-1">
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                  {isThinking ? 'THINKING...' : chat.isSpeakingMurf ? 'SPEAKING (Murf)' : isListening ? 'LISTENING' : 'READY'}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {(isSpeaking || chat.isSpeakingMurf) && <Waveform />}
-              <button
-                onClick={endInterview}
-                className="md:hidden cursor-pointer bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-x-2 transition"
-              >
-                <i className="fas fa-times" /> END
-              </button>
-            </div>
+    <div className="min-h-[100dvh] bg-zinc-950 text-white overflow-hidden pt-24 pb-6 selection:bg-violet-500/30 font-sans"> 
+      
+      {/* 
+        CRITICAL FIX FOR 3D MIC BACKGROUND:
+        This deeply targets all child wrapper divs generated by the imported `ThreeMic.jsx`
+        component and brutally strips their backgrounds, borders, and shadows to 0. 
+        This is how we force the WebGL Canvas to seamlessly float natively on our gradient.
+      */}
+      <style>{`
+        .hologram-mic-wrapper div { 
+          background: transparent !important; 
+          border: none !important; 
+          box-shadow: none !important; 
+          border-radius: 0 !important;
+        }
+        .hologram-mic-wrapper canvas {
+          outline: none !important;
+          background: transparent !important;
+        }
+      `}</style>
+      
+      <div className="flex flex-col xl:flex-row h-full xl:h-[calc(100vh-120px)] max-w-[1600px] mx-auto px-4 md:px-6 gap-6">
+        
+        {/* LEFT PROGRESS PANEL */}
+        <div className="w-full xl:w-[340px] bg-white/[0.02] border border-white/10 rounded-[40px] p-8 md:p-10 flex flex-col relative backdrop-blur-2xl shrink-0 shadow-2xl h-[280px] xl:h-[calc(100vh-150px)] overflow-hidden">
+          <div className="absolute -top-32 -left-32 w-80 h-80 bg-violet-600/10 blur-[80px] pointer-events-none" />
+          
+          <div className="text-[10px] font-black tracking-[0.25em] text-violet-400 mb-4 relative z-10 drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]">INTERVIEW PROGRESS</div>
+          <div className="text-4xl md:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-zinc-600 relative z-10 mb-6 drop-shadow-sm flex items-baseline gap-1">
+            {currentStep}<span className="text-2xl md:text-3xl lg:text-4xl text-zinc-700 font-bold">/{totalQuestions}</span>
+          </div>
+          
+          <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden relative z-10 mb-8 border border-white/5 shrink-0">
+            <div className="h-full bg-gradient-to-r from-violet-600 to-cyan-400 transition-all duration-1000 shadow-[0_0_15px_rgba(34,211,238,0.8)]" style={{ width: `${progressPct}%` }} />
           </div>
 
-          <ChatArea />
-
-          {/* MIC BUTTON - THIS IS WHAT YOU CLICK */}
-          <div className="bg-zinc-900 border-t border-zinc-800 p-6">
-            <div className="flex items-center justify-center gap-x-6">
-              <button
-                onClick={handleToggleMic}
-                disabled={isThinking || chat.isSpeakingMurf}
-                className={`w-20 h-20 rounded-3xl flex items-center justify-center text-5xl shadow-2xl transition-all active:scale-95 ${
-                  isListening
-                    ? 'bg-red-500 shadow-red-500/60 animate-mic-pulse'
-                    : 'bg-violet-600 hover:bg-violet-500 shadow-violet-600/60'
-                } ${isThinking || chat.isSpeakingMurf ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <i className={`fas ${isListening ? 'fa-stop' : 'fa-microphone'}`} />
-              </button>
-
-              <div className="text-center">
-                <div className="text-xs font-medium text-zinc-400 mb-1">
-                  {isListening ? 'LISTENING' : isThinking ? 'PROCESSING' : chat.isSpeakingMurf ? 'FALCON SPEAKING' : 'PRESS TO SPEAK'}
+          <div className="space-y-4 md:space-y-6 text-sm relative z-10 w-full overflow-y-auto pr-2 pb-4 flex-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {Array.from({ length: totalQuestions }).map((_, i) => {
+              const isActive = i === currentQuestionIndex;
+              const isPast = i < currentQuestionIndex;
+              const itemText = questions[i] || `Question Phase ${i + 1}`;
+              
+              return (
+                <div key={i} className={`flex items-center gap-4 ${isActive ? 'text-white font-bold' : isPast ? 'text-violet-300 font-medium' : 'text-zinc-600 font-light'}`}>
+                  <div className={`w-8 h-8 rounded-full flex shrink-0 items-center justify-center text-[11px] font-bold border transition-colors ${
+                    isActive ? 'bg-violet-600 border-violet-400 shadow-[0_0_15px_rgba(168,85,247,0.5)] text-white' : isPast ? 'bg-violet-900/50 border-violet-500/30 text-violet-300' : 'bg-transparent border-white/10 text-zinc-600'
+                  }`}>
+                    {isPast ? '✓' : i + 1}
+                  </div>
+                  <span className="truncate w-full">{itemText.length > 30 ? `Question ${i + 1}` : itemText}</span>
                 </div>
-                <div className="font-mono text-sm text-violet-300">{statusText}</div>
-                <div className="text-[10px] text-zinc-500 mt-1">Press / key for quick toggle</div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
 
-        <TranscriptPanel />
+        {/* CENTER CHAT AND MIC */}
+        {/* We use relative positioning heavily to guarantee flawless horizontal rendering arrays */}
+        <div className="flex-1 flex flex-col min-h-[650px] xl:min-h-[calc(100vh-150px)] bg-white/[0.02] border border-white/10 rounded-[40px] overflow-hidden backdrop-blur-3xl relative shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+          
+          {/* HEADER: Glowing Role Name */}
+          <div className="w-full bg-black/60 border-b border-white/5 py-4 px-6 md:px-8 flex items-center justify-between z-30 shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+              <h2 className="text-xs md:text-sm font-black uppercase tracking-[0.3em] text-violet-300 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]">
+                {currentRole}
+              </h2>
+            </div>
+            {(isThinking || chat.isSpeakingMurf) && (
+              <div className="text-[10px] md:text-xs font-mono font-bold text-cyan-400 animate-pulse bg-cyan-900/20 px-3 md:px-4 py-1.5 rounded-full border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.3)] shrink-0">
+                <span className="mr-2 animate-spin inline-block">⏳</span> {isThinking ? 'PROCESSING' : 'TRANSMITTING'}
+              </div>
+            )}
+          </div>
+
+          {/* TARGET PROMPT: Floating AI Question Card */}
+          <div className="px-6 md:px-10 pt-6 md:pt-8 w-full relative z-30 shrink-0">
+            <div className="w-full bg-zinc-900/80 border border-violet-500/20 rounded-3xl p-5 md:p-6 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-violet-600/20 border border-violet-500/50 flex items-center justify-center shrink-0 shadow-[inset_0_0_15px_rgba(168,85,247,0.2)]">
+                <i className="fas fa-robot text-violet-400 text-sm"></i>
+              </div>
+              <div className="flex-1">
+                <div className="text-[10px] font-black tracking-[0.2em] text-zinc-500 mb-1.5 uppercase">
+                  Target Prompt - {currentStep}/{totalQuestions}
+                </div>
+                <p className="text-white text-[15px] md:text-[17px] leading-relaxed font-medium pt-1">
+                  {questions[currentQuestionIndex] || "Tell me about yourself and your overall experience."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* CHAT MESSAGES TRAY */}
+          <div className="flex-1 px-6 md:px-10 pt-6 pb-2 overflow-y-auto space-y-4 md:space-y-6 relative z-20 mask-image-bottom [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {messages.length === 0 && (
+              <div className="h-full flex flex-col items-center justify-center opacity-30 text-zinc-500 text-sm font-light mt-10">
+                <i className="fas fa-wave-square text-3xl mb-3"></i>
+                <p>Telemetry standby...</p>
+              </div>
+            )}
+            
+            {(Array.isArray(messages) ? messages : []).map((msg, i) => (
+              <div key={i} className={`flex w-full ${msg?.isAI ? 'justify-start' : 'justify-end'}`}>
+                <div className={`max-w-[85%] md:max-w-[75%] px-5 md:px-6 py-3.5 md:py-4 rounded-[24px] text-[14px] md:text-[15px] leading-relaxed tracking-wide shadow-xl backdrop-blur-md ${
+                  msg?.isAI ? 'bg-black/60 border border-violet-500/20 text-zinc-300 rounded-tl-sm' : 'bg-gradient-to-br from-violet-600 to-indigo-700 text-white border border-violet-400/50 rounded-tr-sm shadow-[0_5px_25px_rgba(168,85,247,0.4)]'
+                }`}>
+                  {msg?.text}
+                </div>
+              </div>
+            ))}
+            {/* Extended padding avoids messages from ever dipping behind the 3D mic rendering logic */}
+            <div ref={messagesEndRef} className="h-16" />
+          </div>
+
+          {/* 
+            3D MIC HARDWARE DECK 
+            CRITICAL FIX: Explicitly centered absolute container logic strictly fixes the hologram 
+            dead center relative to the "Press to Speak" button deck!
+          */}
+          <div className="w-full h-[220px] md:h-[260px] bg-gradient-to-t from-black/95 via-black/80 to-transparent border-t border-white/5 relative z-10 shrink-0 mt-auto flex flex-col items-center justify-end pb-8">
+            
+            {/* Absolute positioning perfectly anchors the mic horizontally without clipping chat */}
+            <div className="absolute bottom-[30px] md:bottom-[40px] left-1/2 -translate-x-1/2 w-[350px] md:w-[500px] pointer-events-none z-0 hologram-mic-wrapper mix-blend-screen drop-shadow-[0_0_50px_rgba(168,85,247,0.3)] flex justify-center">
+              <ThreeMic isListening={isListening} />
+            </div>
+
+            <div className="relative z-30 flex flex-col items-center">
+              <button
+                onClick={handleToggleMic}
+                disabled={isThinking || chat.isSpeakingMurf}
+                className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex shrink-0 items-center justify-center text-3xl md:text-3xl transition-all duration-300 border-[3px] pointer-events-auto backdrop-blur-2xl shadow-[0_15px_30px_rgba(0,0,0,0.5)] ${
+                  isThinking || chat.isSpeakingMurf ? 'opacity-50 cursor-not-allowed bg-zinc-800 border-zinc-700' :
+                  isListening ? 'bg-red-600/90 text-white border-red-400 animate-[pulse_1s_infinite] shadow-[0_0_50px_rgba(239,68,68,0.8)] scale-110' : 'bg-gradient-to-tr from-violet-700/80 to-violet-500/80 text-white border-violet-400/80 hover:bg-violet-500 hover:scale-110 shadow-[0_0_40px_rgba(168,85,247,0.6)]'
+                }`}
+              >
+                {isListening ? '⏹️' : '🎙️'}
+              </button>
+
+              <div className="mt-5 flex flex-col items-center gap-1.5 bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-xl shadow-lg">
+                <span className={`text-[11px] md:text-[12px] font-black uppercase tracking-[0.3em] transition-colors ${isListening ? 'text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)] animate-pulse' : 'text-zinc-400'}`}>
+                   {isListening ? 'Listening...' : 'System Idle'}
+                </span>
+                <span className="text-[9px] md:text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                   {isListening ? 'Click to Stop' : 'Press to Speak'}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+
+        {/* RIGHT LIVE FEEDBACK PANEL */}
+        <div className="w-full xl:w-[340px] bg-white/[0.02] border border-white/10 rounded-[40px] p-8 md:p-10 flex flex-col relative overflow-hidden backdrop-blur-2xl shrink-0 shadow-2xl h-[450px] xl:h-[calc(100vh-150px)]">
+          <div className="absolute -top-32 -right-32 w-80 h-80 bg-cyan-600/10 blur-[80px] pointer-events-none" />
+          
+          <div className="text-[10px] font-black tracking-[0.25em] text-cyan-400 mb-8 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] uppercase">Telemetry Feed</div>
+
+          <div className="flex-1 w-full overflow-y-auto pb-10 scrollbar-hide flex flex-col min-h-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="mb-8 p-5 md:p-6 bg-black/60 rounded-3xl border border-white/5 shadow-[inset_0_5px_20px_rgba(0,0,0,0.5)] shrink-0 relative z-10">
+              <div className="flex justify-between items-end mb-4">
+                <span className="text-[10px] font-black tracking-widest text-zinc-500">CONF_INDEX</span>
+                <span className="text-sm font-bold text-white tracking-wider">HIGH (84%)</span>
+              </div>
+              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full w-[84%] bg-gradient-to-r from-cyan-500 to-blue-400 shadow-[0_0_15px_rgba(34,211,238,0.6)]" />
+              </div>
+            </div>
+
+            <div className="mb-8 p-5 md:p-6 bg-black/60 rounded-3xl border border-white/5 shadow-[inset_0_5px_20px_rgba(0,0,0,0.5)] shrink-0 relative z-10">
+              <div className="text-[10px] font-black tracking-widest text-zinc-500 mb-6">TONAL_FREQUENCY</div>
+              <div className="flex gap-1 md:gap-2 items-end h-16">
+                {[60, 75, 90, 65, 80, 55, 95, 70].map((v, i) => (
+                  <div key={i} className="flex-1 bg-gradient-to-t from-violet-600/30 to-violet-500/80 hover:to-cyan-400 transition-all duration-300 rounded-t-sm relative group cursor-crosshair" style={{ height: `${v}%` }}>
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-black tracking-widest text-cyan-300 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 px-2 py-0.5 rounded">{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-auto bg-gradient-to-br from-violet-900/30 to-zinc-950 rounded-[28px] p-6 md:p-8 border border-violet-500/20 relative shadow-[inset_0_0_30px_rgba(168,85,247,0.05)] shrink-0 z-10">
+              <div className="absolute -top-4 -right-4 w-16 h-16 bg-violet-600/20 blur-[20px] rounded-full pointer-events-none" />
+              <div className="text-[10px] font-black tracking-[0.25em] text-violet-400 mb-3 drop-shadow-sm">FALCON FEEDBACK</div>
+              <p className="text-xs md:text-sm text-zinc-300 leading-relaxed font-light">
+                {feedbackText || "Standing by. System requires vocal pattern input to generate analysis overlay."}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

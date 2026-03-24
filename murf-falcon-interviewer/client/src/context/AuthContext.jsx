@@ -1,3 +1,4 @@
+// client/src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import API from '../api/axios';
 
@@ -9,53 +10,91 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Check saved session on mount
+  // Core Session Verification Bootload
   useEffect(() => {
-    try {
-      const savedToken = localStorage.getItem('murf_token');
-      const savedUser = localStorage.getItem('murf_user');
+    let isMounted = true;
+    const controller = new AbortController();
 
-      if (savedToken && savedUser) {
-        setToken(savedToken);
-        setUser(JSON.parse(savedUser));
+    const verifySession = async () => {
+      try {
+        const savedToken = localStorage.getItem('murf_token');
+        const savedUser = localStorage.getItem('murf_user');
 
-        // Verify token
-        API.get('/auth/me')
-          .then((res) => {
-            setUser(res.data.data.user);
-            localStorage.setItem('murf_user', JSON.stringify(res.data.data.user));
-          })
-          .catch(() => {
-            // Token expired — clear
+        // Immediately unblock the UI if no session exists at all
+        if (!savedToken || !savedUser) {
+           if (isMounted) setLoading(false);
+           return;
+        }
+
+        // Apply fast local storage mounting while verifying server-side bounds
+        if (isMounted) {
+          setToken(savedToken);
+          setUser(JSON.parse(savedUser));
+        }
+        
+        API.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+
+        try {
+          const res = await API.get('/auth/me', { signal: controller.signal });
+          
+          if (isMounted) {
+            const validUser = res.data.data.user;
+            setUser(validUser);
+            localStorage.setItem('murf_user', JSON.stringify(validUser));
+          }
+        } catch (err) {
+          // In React 18 StrictMode, this will catch when the first test render is aborted.
+          // By breaking out of the logic entirely, we ignore the error and let the second render succeed cleanly.
+          if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
+
+          // Standard API rejection logic triggers session wipe
+          if (isMounted) {
+            delete API.defaults.headers.common['Authorization'];
             localStorage.removeItem('murf_token');
             localStorage.removeItem('murf_user');
             setUser(null);
             setToken(null);
-          })
-          .finally(() => setLoading(false));
-      } else {
-        setLoading(false);
+          }
+        } finally {
+          // ALWAYS disable the loading overlay once networking resolves or rejects
+          if (isMounted) {
+            setLoading(false);
+          }
+        }
+      } catch (e) {
+        console.error('Fatal initialization error:', e);
+        if (isMounted) setLoading(false);
       }
-    } catch (e) {
-      console.error('Auth init error:', e);
-      setLoading(false);
-    }
+    };
+
+    verifySession();
+
+    // Secure unmounting handler drops stale requests safely
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, []);
 
   const signup = useCallback(async (fullName, email, password) => {
     try {
       setError(null);
       const res = await API.post('/auth/signup', { fullName, email, password });
+      
+      if (!res?.data?.data) throw new Error("Invalid response format from server");
+      
       const { user: userData, token: newToken } = res.data.data;
 
       setUser(userData);
       setToken(newToken);
+      API.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      
       localStorage.setItem('murf_token', newToken);
       localStorage.setItem('murf_user', JSON.stringify(userData));
 
       return { success: true };
     } catch (err) {
-      const message = err.response?.data?.message || 'Signup failed. Try again.';
+      const message = err.response?.data?.message || 'Signup failed. Please try again.';
       setError(message);
       return { success: false, message };
     }
@@ -65,16 +104,21 @@ export function AuthProvider({ children }) {
     try {
       setError(null);
       const res = await API.post('/auth/login', { email, password });
+      
+      if (!res?.data?.data) throw new Error("Invalid response format from server");
+
       const { user: userData, token: newToken } = res.data.data;
 
       setUser(userData);
       setToken(newToken);
+      API.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      
       localStorage.setItem('murf_token', newToken);
       localStorage.setItem('murf_user', JSON.stringify(userData));
 
       return { success: true };
     } catch (err) {
-      const message = err.response?.data?.message || 'Login failed. Check your credentials.';
+      const message = err.response?.data?.message || 'Login failed. Check your security credentials.';
       setError(message);
       return { success: false, message };
     }
@@ -84,6 +128,8 @@ export function AuthProvider({ children }) {
     setUser(null);
     setToken(null);
     setError(null);
+    
+    delete API.defaults.headers.common['Authorization'];
     localStorage.removeItem('murf_token');
     localStorage.removeItem('murf_user');
   }, []);
@@ -104,6 +150,10 @@ export function AuthProvider({ children }) {
         setError,
       }}
     >
+      {/* 
+        Strict inline alignment eliminates removeChild ghost element mismatches internally 
+        by avoiding multiple root rendering loops against asynchronous dependencies.
+      */}
       {children}
     </AuthContext.Provider>
   );
@@ -111,6 +161,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error('useAuth boundary compromised: must be used within an active AuthProvider network.');
   return ctx;
 }

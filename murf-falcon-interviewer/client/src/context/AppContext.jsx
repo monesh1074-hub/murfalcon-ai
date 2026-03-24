@@ -1,3 +1,4 @@
+// client/src/context/AppContext.jsx
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { questionBanks } from '../data/questionBanks';
 
@@ -14,7 +15,7 @@ export function AppProvider({ children }) {
   const [feedbackText, setFeedbackText] = useState('Speak your answer to get feedback...');
   const [toast, setToast] = useState(null);
 
-  // Scores with default values
+  // Scores with default values optimized for visually engaging fallback layout
   const [scores, setScores] = useState({
     overall: 84,
     conf: 7.0,
@@ -50,7 +51,7 @@ export function AppProvider({ children }) {
   }, [showToast]);
 
   const startInterview = useCallback((role) => {
-    const qs = questionBanks[role];
+    const qs = questionBanks[role] || ['Tell me about yourself.'];
     setCurrentRole(role);
     setQuestions(qs);
     setCurrentQuestionIndex(0);
