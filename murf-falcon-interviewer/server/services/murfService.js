@@ -8,20 +8,28 @@ const MURF_API_URL = process.env.MURF_API_URL || 'https://api.murf.ai/v1';
 
 const VOICE_MAP = {
   en: {
-    interviewer: 'en-US-natalie',   // ← Natural female voice (much better than male)
+    'Evelyn': 'en-US-natalie',
+    'Marcus': 'en-US-terrell',
+    'Nova': 'en-UK-hazel',
+    'Atlas': 'en-US-cooper',
+    interviewer: 'en-US-natalie',
   },
   hi: {
+    'Evelyn': 'hi-IN-ananya',
+    'Marcus': 'hi-IN-arohan',
+    'Nova': 'hi-IN-ananya',
+    'Atlas': 'hi-IN-arohan',
     interviewer: 'hi-IN-ananya',
   },
 };
 
-export async function generateMurfSpeech(text, lang = 'en', voiceType = 'interviewer', useFalcon = false) {
+export async function generateMurfSpeech(text, lang = 'en', voiceType = 'Evelyn', useFalcon = false) {
   if (!MURF_API_KEY || MURF_API_KEY.includes('your_')) {
     console.log('⚠️ No Murf key → browser fallback');
     return { success: false, fallback: true };
   }
 
-  const voiceId = VOICE_MAP[lang]?.[voiceType] || 'en-US-natalie';
+  const voiceId = VOICE_MAP[lang]?.[voiceType] || VOICE_MAP[lang]?.['Evelyn'] || 'en-US-natalie';
   const startTime = Date.now();
 
   try {

@@ -131,7 +131,7 @@ export default function SelectionScreen() {
           {roles.map((role, i) => (
             <div
               key={i}
-              onClick={() => startInterview(role.title)}
+              onClick={() => startInterview(role.title, voice)}
               className="group relative bg-black/40 border border-white/10 hover:border-violet-500/60 rounded-[32px] p-8 md:p-10 cursor-pointer transition-all duration-500 hover:-translate-y-4 hover:shadow-[0_30px_60px_rgba(168,85,247,0.2)] overflow-hidden backdrop-blur-xl"
             >
               {/* Internal Card Hover Glow Matrix */}

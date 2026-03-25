@@ -9,7 +9,7 @@ export function useChat() {
   console.log('✅ useChat hook loaded - Murf ready');
 
   // Get AI reply + Murf voice
-  const getReply = useCallback(async ({ sessionId, userMessage, role, lang, questionIndex, totalQuestions }) => {
+  const getReply = useCallback(async ({ sessionId, userMessage, role, voice, lang, questionIndex, totalQuestions }) => {
     console.log('🚀 [Murf Call] Sending to backend /chat/reply');
     setIsThinking(true);
 
@@ -18,6 +18,7 @@ export function useChat() {
         sessionId,
         userMessage,
         role,
+        voice,
         lang,
         questionIndex,
         totalQuestions,
@@ -58,10 +59,10 @@ export function useChat() {
   }, []);
 
   // Speak any text with Murf (used for welcome & next questions)
-  const speakWithMurf = useCallback(async (text, lang = 'en') => {
+  const speakWithMurf = useCallback(async (text, voice = 'Evelyn', lang = 'en') => {
     console.log('🎤 speakWithMurf called with text:', text.substring(0, 50));
     try {
-      const res = await API.post('/chat/speak', { text, lang });
+      const res = await API.post('/chat/speak', { text, voice, lang });
       const { audio } = res.data.data;
 
       if (audio?.available && audio?.url) {

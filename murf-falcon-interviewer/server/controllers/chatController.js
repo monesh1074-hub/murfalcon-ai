@@ -6,7 +6,7 @@ import { pool } from '../config/db.js';
 // User sends their answer, gets AI reply + voice
 export async function getChatReply(req, res, next) {
   try {
-    const { sessionId, userMessage, role, lang, questionIndex, totalQuestions } = req.body;
+    const { sessionId, userMessage, role, voice, lang, questionIndex, totalQuestions } = req.body;
     const userId = req.user.id;
 
     if (!userMessage || userMessage.trim() === '') {
@@ -30,7 +30,7 @@ export async function getChatReply(req, res, next) {
     const voiceResult = await generateMurfSpeech(
       aiResult.reply,
       lang || 'en',
-      'interviewer'
+      voice || 'Evelyn'
     );
 
     // Step 3: Save Q&A to database (if session exists)
@@ -132,7 +132,7 @@ export async function getInterviewScore(req, res, next) {
 // Just convert text to Murf voice (no AI)
 export async function speakText(req, res, next) {
   try {
-    const { text, lang } = req.body;
+    const { text, voice, lang } = req.body;
 
     if (!text || text.trim() === '') {
       return res.status(400).json({
@@ -141,7 +141,7 @@ export async function speakText(req, res, next) {
       });
     }
 
-    const voiceResult = await generateMurfSpeech(text, lang || 'en', 'interviewer');
+    const voiceResult = await generateMurfSpeech(text, lang || 'en', voice || 'Evelyn');
 
     res.json({
       success: true,

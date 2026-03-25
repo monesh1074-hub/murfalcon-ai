@@ -10,6 +10,7 @@ export default function InterviewScreen() {
   const appCtx = useApp() || {};
   const {
     currentRole = 'System Developer',
+    currentVoice = 'Evelyn',
     currentLang = 'en',
     messages = [],
     transcripts = [],
@@ -35,7 +36,7 @@ export default function InterviewScreen() {
   const hasStartedRef = useRef(false);
   const messagesEndRef = useRef(null);
 
-  // Auto-scroll chat area
+  // Auto-scroll chat area elegantly targets the invisible spacing block precisely beneath the transcript array
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -49,13 +50,13 @@ export default function InterviewScreen() {
       const welcome = `Hello ${user?.fullName || 'there'}! I am Falcon, your AI interviewer for the ${currentRole} role. Let's begin.`;
       addMessage(welcome, true);
 
-      if (chat.speakWithMurf) chat.speakWithMurf(welcome);
+      if (chat.speakWithMurf) chat.speakWithMurf(welcome, currentVoice);
 
       setTimeout(() => {
         if (questions && questions[0]) {
           addMessage(questions[0], true);
           addTranscript(questions[0], false);
-          if (chat.speakWithMurf) chat.speakWithMurf(questions[0]);
+          if (chat.speakWithMurf) chat.speakWithMurf(questions[0], currentVoice);
         }
       }, 3500);
     };
@@ -76,6 +77,7 @@ export default function InterviewScreen() {
       sessionId: sessionId || `temp_${Date.now()}`,
       userMessage: transcriptText,
       role: currentRole,
+      voice: currentVoice,
       lang: currentLang,
       questionIndex: currentQuestionIndex,
       totalQuestions: totalQs,
@@ -96,7 +98,7 @@ export default function InterviewScreen() {
           const nextQ = questions[nextIdx] || "Could you describe that further?";
           addMessage(nextQ, true);
           addTranscript(nextQ, false);
-          if (chat.speakWithMurf) chat.speakWithMurf(nextQ);
+          if (chat.speakWithMurf) chat.speakWithMurf(nextQ, currentVoice);
         }, 1500);
       } else {
         if (chat.getScore) {
@@ -160,7 +162,7 @@ export default function InterviewScreen() {
             <div className="h-full bg-gradient-to-r from-violet-600 to-cyan-400 transition-all duration-1000 shadow-[0_0_15px_rgba(34,211,238,0.8)]" style={{ width: `${progressPct}%` }} />
           </div>
 
-          <div className="space-y-4 md:space-y-6 text-sm relative z-10 w-full overflow-y-auto pr-2 pb-4 flex-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="space-y-4 md:space-y-6 text-sm relative z-10 w-full overflow-y-auto pr-2 pb-4 flex-1 scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {Array.from({ length: totalQuestions }).map((_, i) => {
               const isActive = i === currentQuestionIndex;
               const isPast = i < currentQuestionIndex;
@@ -198,8 +200,8 @@ export default function InterviewScreen() {
           </div>
 
           {/* TARGET PROMPT: Floating AI Question Card */}
-          <div className="px-6 md:px-10 pt-6 md:pt-8 w-full relative z-30 shrink-0">
-            <div className="w-full bg-zinc-900/80 border border-violet-500/20 rounded-3xl p-5 md:p-6 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-start gap-4">
+          <div className="px-6 md:px-10 pt-6 md:pt-8 w-full relative z-30 shrink-0 pointer-events-none">
+            <div className="w-full bg-zinc-900/80 border border-violet-500/20 rounded-3xl p-5 md:p-6 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-start gap-4 pointer-events-auto">
               <div className="w-10 h-10 rounded-full bg-violet-600/20 border border-violet-500/50 flex items-center justify-center shrink-0 shadow-[inset_0_0_15px_rgba(168,85,247,0.2)]">
                 <i className="fas fa-robot text-violet-400 text-sm"></i>
               </div>
@@ -215,8 +217,8 @@ export default function InterviewScreen() {
           </div>
 
           {/* CHAT MESSAGES TRAY */}
-          {/* FIX: Expanded interior padding guarantees messages never clip the 3D mic's absolute border limit. */}
-          <div className="flex-1 px-6 md:px-10 pt-6 pb-2 overflow-y-auto space-y-4 md:space-y-6 relative z-20 mask-image-bottom [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {/* FIX: Advanced vertical padding and relative z-indexing ensures the conversation flows smoothly underneath the floating holographic microphone deck without occlusion. */}
+          <div className="flex-1 px-6 md:px-10 pt-8 pb-2 overflow-y-auto space-y-6 md:space-y-8 relative z-20 scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
             {messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center opacity-30 text-zinc-500 text-sm font-light mt-10">
                 <i className="fas fa-wave-square text-3xl mb-3"></i>
@@ -224,20 +226,47 @@ export default function InterviewScreen() {
               </div>
             )}
 
-            {(Array.isArray(messages) ? messages : []).map((msg, i) => (
-              <div key={i} className={`flex w-full ${msg?.isAI ? 'justify-start' : 'justify-end'}`}>
-                <div className={`max-w-[85%] md:max-w-[75%] px-5 md:px-6 py-3.5 md:py-4 rounded-[24px] text-[14px] md:text-[15px] leading-relaxed tracking-wide shadow-xl backdrop-blur-md ${msg?.isAI ? 'bg-black/60 border border-violet-500/20 text-zinc-300 rounded-tl-sm' : 'bg-gradient-to-br from-violet-600 to-indigo-700 text-white border border-violet-400/50 rounded-tr-sm shadow-[0_5px_25px_rgba(168,85,247,0.4)]'
-                  }`}>
-                  {msg?.text}
+            {(Array.isArray(messages) ? messages : []).map((msg, i) => {
+              const isAI = msg?.isAI;
+              return (
+                <div key={i} className={`flex w-full ${isAI ? 'justify-start' : 'justify-end'} animate-[fadeIn_0.5s_ease-out]`}>
+                  <div className={`flex items-end gap-3 md:gap-4 max-w-[95%] md:max-w-[85%] ${isAI ? 'flex-row' : 'flex-row-reverse'}`}>
+                    
+                    {/* Character Avatar Component */}
+                    <div className={`w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-full flex items-center justify-center text-sm md:text-base border shadow-lg ${
+                      isAI 
+                      ? 'bg-violet-900/50 border-violet-500/50 text-violet-300 shadow-[0_0_15px_rgba(168,85,247,0.4)]' 
+                      : 'bg-cyan-900/50 border-cyan-500/50 text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.4)]'
+                    }`}>
+                      {isAI ? <i className="fas fa-robot"></i> : <i className="fas fa-user"></i>}
+                    </div>
+
+                    {/* Chat Bubble Framework with distinct styling blocks per speaker identity */}
+                    <div className={`flex flex-col gap-1.5 ${isAI ? 'items-start' : 'items-end'}`}>
+                      <span className={`text-[10px] font-black tracking-widest uppercase px-2 ${isAI ? 'text-violet-400' : 'text-cyan-400'}`}>
+                        {isAI ? 'FALCON AI' : (user?.fullName || 'CANDIDATE')}
+                      </span>
+                      <div className={`px-5 py-3.5 md:px-6 md:py-4 rounded-[28px] text-[14px] md:text-[15px] leading-relaxed tracking-wide shadow-2xl backdrop-blur-xl ${
+                        isAI 
+                        ? 'bg-black/80 border border-violet-500/30 text-zinc-200 rounded-bl-sm border-l-2 border-l-violet-500 hover:border-violet-500/60 transition-colors' 
+                        : 'bg-gradient-to-br from-violet-700 to-indigo-800 text-white border border-white/10 rounded-br-sm shadow-[0_5px_25px_rgba(168,85,247,0.3)]'
+                      }`}>
+                        {msg?.text}
+                      </div>
+                    </div>
+
+                  </div>
                 </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} className="h-16" />
+              );
+            })}
+            
+            {/* Extended anchor element to guarantee the auto-scroll pushes the latest message completely above the absolute 3D mic layout */}
+            <div ref={messagesEndRef} className="h-28 md:h-36 shrink-0 w-full" />
           </div>
 
           {/* 3D MIC HARDWARE DECK */}
           {/* FIX: Explicit absolute anchoring of the mic dynamically dead center over the "Press to Speak" array! */}
-          <div className="w-full h-[220px] md:h-[260px] bg-gradient-to-t from-black/95 via-black/80 to-transparent border-t border-white/5 relative z-10 shrink-0 mt-auto flex flex-col items-center justify-end pb-8">
+          <div className="w-full h-[220px] md:h-[260px] bg-gradient-to-t from-black via-black/90 to-transparent relative z-30 shrink-0 mt-auto flex flex-col items-center justify-end pb-8">
 
             {/* The absolute overlay container completely separates the scale math from internal container limits */}
             <div className="absolute bottom-[30px] md:bottom-[40px] left-1/2 -translate-x-1/2 w-[350px] md:w-[500px] pointer-events-none z-0 hologram-mic-wrapper mix-blend-screen drop-shadow-[0_0_50px_rgba(168,85,247,0.3)] flex justify-center">

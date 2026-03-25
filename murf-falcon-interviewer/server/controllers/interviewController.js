@@ -14,7 +14,7 @@ const { rows: [result] } = await pool.query(
     res.status(201).json({
       success: true,
       data: {
-        sessionId: result.insertId,
+        sessionId: result.id,
         roleType,
         language,
       },
@@ -29,8 +29,8 @@ export async function saveAnswer(req, res, next) {
   try {
     const { sessionId, questionIndex, questionText, answerText, confidenceScore } = req.body;
 
-    await pool.execute(
-      'INSERT INTO interview_qa (session_id, question_index, question_text, answer_text, confidence_score) VALUES (?, ?, ?, ?, ?)',
+    await pool.query(
+      'INSERT INTO interview_qa (session_id, question_index, question_text, answer_text, confidence_score) VALUES ($1, $2, $3, $4, $5)',
       [sessionId, questionIndex, questionText, answerText, confidenceScore || 0]
     );
 
@@ -48,15 +48,15 @@ export async function completeSession(req, res, next) {
   try {
     const { sessionId, overallScore, confidenceScore, clarityScore, technicalScore } = req.body;
 
-    await pool.execute(
+    await pool.query(
       `UPDATE interview_sessions 
        SET status = 'completed', 
-           overall_score = ?, 
-           confidence_score = ?, 
-           clarity_score = ?, 
-           technical_score = ?,
+           overall_score = $1, 
+           confidence_score = $2, 
+           clarity_score = $3, 
+           technical_score = $4,
            completed_at = NOW() 
-       WHERE id = ? AND user_id = ?`,
+       WHERE id = $5 AND user_id = $6`,
       [overallScore, confidenceScore, clarityScore, technicalScore, sessionId, req.user.id]
     );
 

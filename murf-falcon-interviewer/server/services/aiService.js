@@ -26,8 +26,8 @@ function getSystemPrompt(role, lang, questionIndex, totalQuestions) {
       : 'Respond entirely in natural, professional English.';
 
   const flowInstruction = questionIndex + 1 >= totalQuestions
-      ? 'This is the final interaction. Provide a brief, warm closing statement thanking the candidate for their time.'
-      : 'Start by acknowledging their answer naturally (varying your phrasing—do NOT use repetitive terms like "Solid answer" or "Great"). Then, ask ONE highly relevant, probing follow-up question related to what they just said.';
+    ? 'This is the final interaction. Provide a brief, warm closing statement thanking the candidate for their time.'
+    : 'Start by acknowledging their answer naturally (varying your phrasing—do NOT use repetitive terms like "Solid answer" or "Great"). Then, ask ONE highly relevant, probing follow-up question related to what they just said.';
 
   return `You are "Falcon", an elite, warm, and highly intelligent AI technical interviewer conducting an interview for the "${role}" position.
 
@@ -121,12 +121,12 @@ async function callGemini(systemPrompt, history) {
 
   const chat = gemini.startChat({
     history: formattedHistory.slice(0, -1),
-    systemInstruction: systemPrompt, 
+    systemInstruction: systemPrompt,
   });
 
   const lastMessage = history[history.length - 1].content;
   const result = await chat.sendMessage(lastMessage);
-  
+
   return result.response.text();
 }
 
@@ -155,20 +155,20 @@ async function callOpenAI(systemPrompt, history) {
 function generateFallbackResponse(userMessage, role, questionIndex, totalQuestions) {
   const lowerMsg = String(userMessage).toLowerCase().trim();
   const isGreeting = lowerMsg === 'hello' || lowerMsg === 'hi' || lowerMsg.startsWith('hi ') || lowerMsg.startsWith('hello');
-  
+
   // Intercept pure greetings instantly
   if (isGreeting) {
-     const greetings = [
-       `Hello there! It's fantastic to meet you. I'm excited to explore your background for the ${role} position. Ready for the first question?`,
-       `Hi! Thanks for joining me today. We have a lot of ground to cover regarding your fit for the ${role} team. Shall we begin?`,
-       `Welcome! I'm Falcon. I've been looking forward to our chat about the ${role} opportunity. Tell me about your background to kick things off.`
-     ];
-     return greetings[Math.floor(Math.random() * greetings.length)];
+    const greetings = [
+      `Hello there! It's fantastic to meet you. I'm excited to explore your background for the ${role} position. Ready for the first question?`,
+      `Hi! Thanks for joining me today. We have a lot of ground to cover regarding your fit for the ${role} team. Shall we begin?`,
+      `Welcome! I'm Falcon. I've been looking forward to our chat about the ${role} opportunity. Tell me about your background to kick things off.`
+    ];
+    return greetings[Math.floor(Math.random() * greetings.length)];
   }
 
   // Intercept interview completion boundaries
   if (questionIndex + 1 >= totalQuestions) {
-     return "Thank you for sharing your insights today. This concludes our formal questions. Our team will evaluate your telemetry and follow up shortly!";
+    return "Thank you for sharing your insights today. This concludes our formal questions. Our team will evaluate your telemetry and follow up shortly!";
   }
 
   // Randomized conversational openers to prevent repetition
@@ -203,7 +203,7 @@ function generateFallbackResponse(userMessage, role, questionIndex, totalQuestio
 
   const selectedOpener = openers[Math.floor(Math.random() * openers.length)];
   const followUpArray = targetedFollowUps[role] || targetedFollowUps['Software Developer'];
-  
+
   // Safely index the questions to ensure they don't overflow the array
   const safeIndex = questionIndex % followUpArray.length;
   const selectedFollowUp = followUpArray[safeIndex];

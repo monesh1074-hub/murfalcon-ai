@@ -130,12 +130,23 @@ export default function HistoryScreen() {
 
                       <div>
                         <h3 className="text-lg font-black text-white tracking-wide mb-1 transition-colors">{session.role_type}</h3>
-                        <div className="flex items-center gap-2">
-                           <span className="text-xs text-zinc-500 font-medium">Evaluation Score:</span>
-                           <span className={`text-sm font-black ${(session.overall_score || 0) >= 90 ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'text-cyan-400'}`}>
-                             {session.overall_score || 0}/100
-                           </span>
+                        
+                        <div className="flex flex-col gap-2 mt-2 w-full">
+                          <div className="flex items-center justify-between w-full">
+                             <span className="text-xs text-zinc-500 font-medium">Evaluation Payload:</span>
+                             <span className={`text-[15px] font-black ${(session.overall_score || 0) >= 80 ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'text-cyan-400'}`}>
+                               {session.overall_score || 0}/100
+                             </span>
+                          </div>
+                          
+                          {/* Mini stat bar for at-a-glance telemetry */}
+                          <div className="flex gap-1.5 w-full h-1.5">
+                            <div className="h-full bg-violet-500/80 rounded" style={{ width: `${(session.confidence_score || 0) * 10}%` }} />
+                            <div className="h-full bg-cyan-400/80 rounded" style={{ width: `${(session.clarity_score || 0) * 10}%` }} />
+                            <div className="h-full bg-indigo-500/80 rounded" style={{ width: `${(session.technical_score || 0) * 10}%` }} />
+                          </div>
                         </div>
+
                       </div>
                     </button>
                   );
@@ -173,15 +184,18 @@ export default function HistoryScreen() {
                       <div className="text-xs font-bold tracking-widest text-violet-400 uppercase">Simulated Assessment</div>
                     </div>
                   </div>
-                  <div className="flex gap-4 flex-wrap">
+                  <div className="flex gap-3 md:gap-4 flex-wrap mt-2">
                     <div className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold tracking-widest text-emerald-400">
                       FINAL RATING: {selectedSession.overall_score || 0}/100
                     </div>
-                    <div className="bg-cyan-500/10 border border-cyan-500/20 px-4 py-2 rounded-xl text-xs font-bold tracking-widest text-cyan-400 opacity-80">
+                    <div className="bg-violet-500/10 border border-violet-500/20 px-4 py-2 rounded-xl text-xs font-bold tracking-widest text-violet-400 opacity-90">
                       CONFIDENCE: {selectedSession.confidence_score || 0}/10
                     </div>
-                    <div className="bg-zinc-800/50 border border-white/5 px-4 py-2 rounded-xl text-xs font-bold tracking-widest text-zinc-400">
-                      QA NODES: {qaList.length}
+                    <div className="bg-cyan-500/10 border border-cyan-500/20 px-4 py-2 rounded-xl text-xs font-bold tracking-widest text-cyan-400 opacity-90">
+                      CLARITY: {selectedSession.clarity_score || 0}/10
+                    </div>
+                    <div className="bg-indigo-500/10 border border-indigo-500/20 px-4 py-2 rounded-xl text-xs font-bold tracking-widest text-indigo-400 opacity-90">
+                      TECHNICAL: {selectedSession.technical_score || 0}/10
                     </div>
                   </div>
                 </div>

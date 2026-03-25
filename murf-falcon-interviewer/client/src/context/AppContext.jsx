@@ -9,6 +9,7 @@ export function AppProvider({ children }) {
   const [screen, setScreen] = useState('home');
   const [currentLang, setCurrentLang] = useState('en');
   const [currentRole, setCurrentRole] = useState('');
+  const [currentVoice, setCurrentVoice] = useState('Evelyn');
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [messages, setMessages] = useState([]);
@@ -52,9 +53,10 @@ export function AppProvider({ children }) {
     });
   }, [showToast]);
 
-  const startInterview = useCallback(async (role) => {
+  const startInterview = useCallback(async (role, voice) => {
     const qs = questionBanks[role] || ['Tell me about yourself.'];
     setCurrentRole(role);
+    if (voice) setCurrentVoice(voice);
     setQuestions(qs);
     setCurrentQuestionIndex(0);
     questionIndexRef.current = 0;
@@ -97,6 +99,7 @@ export function AppProvider({ children }) {
     setCurrentLang,
     toggleLanguage,
     currentRole,
+    currentVoice,
     questions,
     currentQuestionIndex,
     questionIndexRef,
