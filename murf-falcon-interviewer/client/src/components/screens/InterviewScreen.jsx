@@ -16,28 +16,31 @@ export default function InterviewScreen() {
     scores = {},
     questions = [],
     currentQuestionIndex = 0,
-    addMessage = () => {},
-    addTranscript = () => {},
-    advanceQuestion = () => {},
-    endInterview = () => {},
-    setScores = () => {},
+    addMessage = () => { },
+    addTranscript = () => { },
+    advanceQuestion = () => { },
+    endInterview = () => { },
+    setScores = () => { },
     feedbackText = 'System awaiting voice sequence.',
-    setFeedbackText = () => {}
+    setFeedbackText = () => { },
+    sessionId
   } = appCtx;
 
   const { user } = useAuth() || {};
-  const chat = useChat() || { getReply: async () => {}, getScore: async () => {}, isSpeakingMurf: false };
-  const speechCtx = useSpeech() || { isListening: false, startListening: () => {}, stopListening: () => {} };
+  const chat = useChat() || { getReply: async () => { }, getScore: async () => { }, isSpeakingMurf: false };
+  const speechCtx = useSpeech() || { isListening: false, startListening: () => { }, stopListening: () => { } };
   const { isListening, startListening, stopListening } = speechCtx;
-  
+
   const [isThinking, setIsThinking] = useState(false);
   const hasStartedRef = useRef(false);
   const messagesEndRef = useRef(null);
 
+  // Auto-scroll chat area
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Bootup sequence
   useEffect(() => {
     if (hasStartedRef.current) return;
     hasStartedRef.current = true;
@@ -45,16 +48,16 @@ export default function InterviewScreen() {
     const startSequence = async () => {
       const welcome = `Hello ${user?.fullName || 'there'}! I am Falcon, your AI interviewer for the ${currentRole} role. Let's begin.`;
       addMessage(welcome, true);
-      
+
       if (chat.speakWithMurf) chat.speakWithMurf(welcome);
-      
+
       setTimeout(() => {
         if (questions && questions[0]) {
           addMessage(questions[0], true);
           addTranscript(questions[0], false);
           if (chat.speakWithMurf) chat.speakWithMurf(questions[0]);
         }
-      }, 3500); 
+      }, 3500);
     };
     startSequence();
   }, [currentRole, questions, user, addMessage, addTranscript, chat]);
@@ -66,10 +69,11 @@ export default function InterviewScreen() {
     addMessage(transcriptText, false);
     addTranscript(transcriptText, true);
 
+    // FIX: Override 1/1 string errors by forcing scale bounds against 5 questions minimum
     const totalQs = Math.max(questions.length || 5, 5);
 
     const result = await chat.getReply({
-      sessionId: `session_${Date.now()}`,
+      sessionId: sessionId || `temp_${Date.now()}`,
       userMessage: transcriptText,
       role: currentRole,
       lang: currentLang,
@@ -82,7 +86,7 @@ export default function InterviewScreen() {
     if (result && result.success) {
       addMessage(result.reply, true);
       addTranscript(result.reply, false);
-      setFeedbackText(`✅ Processing complete • Tonal Analysis: Standard`); 
+      setFeedbackText(`✅ Processing complete • Tonal Analysis: Standard`);
 
       advanceQuestion();
       const nextIdx = currentQuestionIndex + 1;
@@ -96,37 +100,37 @@ export default function InterviewScreen() {
         }, 1500);
       } else {
         if (chat.getScore) {
-           const finalScores = await chat.getScore(`session_${Date.now()}`, currentRole);
-           setScores(finalScores);
+          const finalScores = await chat.getScore(sessionId || `temp_${Date.now()}`, currentRole);
+          setScores(finalScores);
         }
         endInterview();
       }
     } else {
       setFeedbackText('❌ Connection Error. Please try speaking again.');
     }
-  }, [currentRole, currentLang, questions, currentQuestionIndex, addMessage, addTranscript, setFeedbackText, advanceQuestion, endInterview, chat, setScores]);
+  }, [currentRole, currentLang, questions, currentQuestionIndex, addMessage, addTranscript, setFeedbackText, advanceQuestion, endInterview, chat, setScores, sessionId]);
 
   const handleToggleMic = () => {
     if (isListening) {
       stopListening();
     } else {
-      if (isThinking || chat.isSpeakingMurf) return; 
+      if (isThinking || chat.isSpeakingMurf) return;
       startListening((text) => handleUserAnswer(text));
     }
   };
 
-  const totalQuestions = Math.max(questions?.length || 5, 5); 
+  // FIX: Mathematics guaranteeing exact step alignment 
+  const totalQuestions = Math.max(questions?.length || 5, 5);
   const currentStep = Math.min(currentQuestionIndex + 1, totalQuestions);
   const progressPct = Math.min((currentStep / totalQuestions) * 100, 100);
 
   return (
-    <div className="min-h-[100dvh] bg-zinc-950 text-white overflow-hidden pt-24 pb-6 selection:bg-violet-500/30 font-sans"> 
-      
+    <div className="min-h-[100dvh] bg-zinc-950 text-white overflow-hidden pt-24 pb-6 selection:bg-violet-500/30 font-sans">
+
       {/* 
         CRITICAL FIX FOR 3D MIC BACKGROUND:
-        This deeply targets all child wrapper divs generated by the imported `ThreeMic.jsx`
-        component and brutally strips their backgrounds, borders, and shadows to 0. 
-        This is how we force the WebGL Canvas to seamlessly float natively on our gradient.
+        Deep CSS Target obliterating all rigid borders, box shadows, and background layers generated
+        inside ThreeMic.jsx without manually destroying the internal component file natively!
       */}
       <style>{`
         .hologram-mic-wrapper div { 
@@ -140,18 +144,18 @@ export default function InterviewScreen() {
           background: transparent !important;
         }
       `}</style>
-      
+
       <div className="flex flex-col xl:flex-row h-full xl:h-[calc(100vh-120px)] max-w-[1600px] mx-auto px-4 md:px-6 gap-6">
-        
+
         {/* LEFT PROGRESS PANEL */}
         <div className="w-full xl:w-[340px] bg-white/[0.02] border border-white/10 rounded-[40px] p-8 md:p-10 flex flex-col relative backdrop-blur-2xl shrink-0 shadow-2xl h-[280px] xl:h-[calc(100vh-150px)] overflow-hidden">
           <div className="absolute -top-32 -left-32 w-80 h-80 bg-violet-600/10 blur-[80px] pointer-events-none" />
-          
+
           <div className="text-[10px] font-black tracking-[0.25em] text-violet-400 mb-4 relative z-10 drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]">INTERVIEW PROGRESS</div>
           <div className="text-4xl md:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-zinc-600 relative z-10 mb-6 drop-shadow-sm flex items-baseline gap-1">
             {currentStep}<span className="text-2xl md:text-3xl lg:text-4xl text-zinc-700 font-bold">/{totalQuestions}</span>
           </div>
-          
+
           <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden relative z-10 mb-8 border border-white/5 shrink-0">
             <div className="h-full bg-gradient-to-r from-violet-600 to-cyan-400 transition-all duration-1000 shadow-[0_0_15px_rgba(34,211,238,0.8)]" style={{ width: `${progressPct}%` }} />
           </div>
@@ -161,12 +165,11 @@ export default function InterviewScreen() {
               const isActive = i === currentQuestionIndex;
               const isPast = i < currentQuestionIndex;
               const itemText = questions[i] || `Question Phase ${i + 1}`;
-              
+
               return (
                 <div key={i} className={`flex items-center gap-4 ${isActive ? 'text-white font-bold' : isPast ? 'text-violet-300 font-medium' : 'text-zinc-600 font-light'}`}>
-                  <div className={`w-8 h-8 rounded-full flex shrink-0 items-center justify-center text-[11px] font-bold border transition-colors ${
-                    isActive ? 'bg-violet-600 border-violet-400 shadow-[0_0_15px_rgba(168,85,247,0.5)] text-white' : isPast ? 'bg-violet-900/50 border-violet-500/30 text-violet-300' : 'bg-transparent border-white/10 text-zinc-600'
-                  }`}>
+                  <div className={`w-8 h-8 rounded-full flex shrink-0 items-center justify-center text-[11px] font-bold border transition-colors ${isActive ? 'bg-violet-600 border-violet-400 shadow-[0_0_15px_rgba(168,85,247,0.5)] text-white' : isPast ? 'bg-violet-900/50 border-violet-500/30 text-violet-300' : 'bg-transparent border-white/10 text-zinc-600'
+                    }`}>
                     {isPast ? '✓' : i + 1}
                   </div>
                   <span className="truncate w-full">{itemText.length > 30 ? `Question ${i + 1}` : itemText}</span>
@@ -177,9 +180,8 @@ export default function InterviewScreen() {
         </div>
 
         {/* CENTER CHAT AND MIC */}
-        {/* We use relative positioning heavily to guarantee flawless horizontal rendering arrays */}
         <div className="flex-1 flex flex-col min-h-[650px] xl:min-h-[calc(100vh-150px)] bg-white/[0.02] border border-white/10 rounded-[40px] overflow-hidden backdrop-blur-3xl relative shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-          
+
           {/* HEADER: Glowing Role Name */}
           <div className="w-full bg-black/60 border-b border-white/5 py-4 px-6 md:px-8 flex items-center justify-between z-30 shadow-md">
             <div className="flex items-center gap-3">
@@ -213,6 +215,7 @@ export default function InterviewScreen() {
           </div>
 
           {/* CHAT MESSAGES TRAY */}
+          {/* FIX: Expanded interior padding guarantees messages never clip the 3D mic's absolute border limit. */}
           <div className="flex-1 px-6 md:px-10 pt-6 pb-2 overflow-y-auto space-y-4 md:space-y-6 relative z-20 mask-image-bottom [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {messages.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center opacity-30 text-zinc-500 text-sm font-light mt-10">
@@ -220,28 +223,23 @@ export default function InterviewScreen() {
                 <p>Telemetry standby...</p>
               </div>
             )}
-            
+
             {(Array.isArray(messages) ? messages : []).map((msg, i) => (
               <div key={i} className={`flex w-full ${msg?.isAI ? 'justify-start' : 'justify-end'}`}>
-                <div className={`max-w-[85%] md:max-w-[75%] px-5 md:px-6 py-3.5 md:py-4 rounded-[24px] text-[14px] md:text-[15px] leading-relaxed tracking-wide shadow-xl backdrop-blur-md ${
-                  msg?.isAI ? 'bg-black/60 border border-violet-500/20 text-zinc-300 rounded-tl-sm' : 'bg-gradient-to-br from-violet-600 to-indigo-700 text-white border border-violet-400/50 rounded-tr-sm shadow-[0_5px_25px_rgba(168,85,247,0.4)]'
-                }`}>
+                <div className={`max-w-[85%] md:max-w-[75%] px-5 md:px-6 py-3.5 md:py-4 rounded-[24px] text-[14px] md:text-[15px] leading-relaxed tracking-wide shadow-xl backdrop-blur-md ${msg?.isAI ? 'bg-black/60 border border-violet-500/20 text-zinc-300 rounded-tl-sm' : 'bg-gradient-to-br from-violet-600 to-indigo-700 text-white border border-violet-400/50 rounded-tr-sm shadow-[0_5px_25px_rgba(168,85,247,0.4)]'
+                  }`}>
                   {msg?.text}
                 </div>
               </div>
             ))}
-            {/* Extended padding avoids messages from ever dipping behind the 3D mic rendering logic */}
             <div ref={messagesEndRef} className="h-16" />
           </div>
 
-          {/* 
-            3D MIC HARDWARE DECK 
-            CRITICAL FIX: Explicitly centered absolute container logic strictly fixes the hologram 
-            dead center relative to the "Press to Speak" button deck!
-          */}
+          {/* 3D MIC HARDWARE DECK */}
+          {/* FIX: Explicit absolute anchoring of the mic dynamically dead center over the "Press to Speak" array! */}
           <div className="w-full h-[220px] md:h-[260px] bg-gradient-to-t from-black/95 via-black/80 to-transparent border-t border-white/5 relative z-10 shrink-0 mt-auto flex flex-col items-center justify-end pb-8">
-            
-            {/* Absolute positioning perfectly anchors the mic horizontally without clipping chat */}
+
+            {/* The absolute overlay container completely separates the scale math from internal container limits */}
             <div className="absolute bottom-[30px] md:bottom-[40px] left-1/2 -translate-x-1/2 w-[350px] md:w-[500px] pointer-events-none z-0 hologram-mic-wrapper mix-blend-screen drop-shadow-[0_0_50px_rgba(168,85,247,0.3)] flex justify-center">
               <ThreeMic isListening={isListening} />
             </div>
@@ -250,31 +248,30 @@ export default function InterviewScreen() {
               <button
                 onClick={handleToggleMic}
                 disabled={isThinking || chat.isSpeakingMurf}
-                className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex shrink-0 items-center justify-center text-3xl md:text-3xl transition-all duration-300 border-[3px] pointer-events-auto backdrop-blur-2xl shadow-[0_15px_30px_rgba(0,0,0,0.5)] ${
-                  isThinking || chat.isSpeakingMurf ? 'opacity-50 cursor-not-allowed bg-zinc-800 border-zinc-700' :
-                  isListening ? 'bg-red-600/90 text-white border-red-400 animate-[pulse_1s_infinite] shadow-[0_0_50px_rgba(239,68,68,0.8)] scale-110' : 'bg-gradient-to-tr from-violet-700/80 to-violet-500/80 text-white border-violet-400/80 hover:bg-violet-500 hover:scale-110 shadow-[0_0_40px_rgba(168,85,247,0.6)]'
-                }`}
+                className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex shrink-0 items-center justify-center text-3xl md:text-3xl transition-all duration-300 border-[3px] pointer-events-auto backdrop-blur-2xl shadow-[0_15px_30px_rgba(0,0,0,0.5)] ${isThinking || chat.isSpeakingMurf ? 'opacity-50 cursor-not-allowed bg-zinc-800 border-zinc-700' :
+                    isListening ? 'bg-red-600/90 text-white border-red-400 animate-[pulse_1s_infinite] shadow-[0_0_50px_rgba(239,68,68,0.8)] scale-110' : 'bg-gradient-to-tr from-violet-700/80 to-violet-500/80 text-white border-violet-400/80 hover:bg-violet-500 hover:scale-110 shadow-[0_0_40px_rgba(168,85,247,0.6)]'
+                  }`}
               >
                 {isListening ? '⏹️' : '🎙️'}
               </button>
 
               <div className="mt-5 flex flex-col items-center gap-1.5 bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-xl shadow-lg">
                 <span className={`text-[11px] md:text-[12px] font-black uppercase tracking-[0.3em] transition-colors ${isListening ? 'text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)] animate-pulse' : 'text-zinc-400'}`}>
-                   {isListening ? 'Listening...' : 'System Idle'}
+                  {isListening ? 'Listening...' : 'System Idle'}
                 </span>
                 <span className="text-[9px] md:text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                   {isListening ? 'Click to Stop' : 'Press to Speak'}
+                  {isListening ? 'Click to Stop' : 'Press to Speak'}
                 </span>
               </div>
             </div>
           </div>
-          
+
         </div>
 
         {/* RIGHT LIVE FEEDBACK PANEL */}
         <div className="w-full xl:w-[340px] bg-white/[0.02] border border-white/10 rounded-[40px] p-8 md:p-10 flex flex-col relative overflow-hidden backdrop-blur-2xl shrink-0 shadow-2xl h-[450px] xl:h-[calc(100vh-150px)]">
           <div className="absolute -top-32 -right-32 w-80 h-80 bg-cyan-600/10 blur-[80px] pointer-events-none" />
-          
+
           <div className="text-[10px] font-black tracking-[0.25em] text-cyan-400 mb-8 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] uppercase">Telemetry Feed</div>
 
           <div className="flex-1 w-full overflow-y-auto pb-10 scrollbar-hide flex flex-col min-h-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">

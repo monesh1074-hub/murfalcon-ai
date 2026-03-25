@@ -1,6 +1,7 @@
 // client/src/context/AppContext.jsx
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { questionBanks } from '../data/questionBanks';
+import API from '../api/axios';
 
 const AppContext = createContext(null);
 
@@ -11,6 +12,7 @@ export function AppProvider({ children }) {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [messages, setMessages] = useState([]);
+  const [sessionId, setSessionId] = useState(null);
   const [transcripts, setTranscripts] = useState([]);
   const [feedbackText, setFeedbackText] = useState('Speak your answer to get feedback...');
   const [toast, setToast] = useState(null);
@@ -50,7 +52,7 @@ export function AppProvider({ children }) {
     });
   }, [showToast]);
 
-  const startInterview = useCallback((role) => {
+  const startInterview = useCallback(async (role) => {
     const qs = questionBanks[role] || ['Tell me about yourself.'];
     setCurrentRole(role);
     setQuestions(qs);
@@ -59,8 +61,22 @@ export function AppProvider({ children }) {
     setMessages([]);
     setTranscripts([]);
     setFeedbackText('Speak your answer to get feedback...');
+    
+    // Authentically establish the database session record before permitting interaction tracking
+    try {
+      const { data } = await API.post('/interview/start', { roleType: role, language: currentLang });
+      if (data?.data?.sessionId) {
+         setSessionId(data.data.sessionId);
+      } else {
+         setSessionId(`temp_${Date.now()}`); 
+      }
+    } catch (e) {
+      console.error("Backend Server Error initializing authentic Supabase linkage logic. Resorting to array boundaries.");
+      setSessionId(`temp_${Date.now()}`);
+    }
+
     setScreen('interview');
-  }, []);
+  }, [currentLang]);
 
   const endInterview = useCallback(() => {
     setScreen('scorecard');
@@ -91,6 +107,7 @@ export function AppProvider({ children }) {
     scores,
     setScores,
     toast,
+    sessionId,
     addMessage,
     addTranscript,
     startInterview,

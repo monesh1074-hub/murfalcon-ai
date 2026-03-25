@@ -74,11 +74,11 @@ export async function getHistory(req, res, next) {
   try {
     const userId = req.user.id;
 
-    const [sessions] = await pool.execute(
+    const { rows: sessions } = await pool.query(
       `SELECT id, role_type, language, overall_score, confidence_score, 
               clarity_score, technical_score, status, started_at, completed_at
        FROM interview_sessions 
-       WHERE user_id = ? 
+       WHERE user_id = $1 
        ORDER BY started_at DESC 
        LIMIT 20`,
       [userId]
@@ -100,8 +100,8 @@ export async function getSessionDetails(req, res, next) {
     const userId = req.user.id;
 
     // Get session
-    const [sessions] = await pool.execute(
-      'SELECT * FROM interview_sessions WHERE id = ? AND user_id = ?',
+    const { rows: sessions } = await pool.query(
+      'SELECT * FROM interview_sessions WHERE id = $1 AND user_id = $2',
       [sessionId, userId]
     );
 
@@ -113,8 +113,8 @@ export async function getSessionDetails(req, res, next) {
     }
 
     // Get Q&A
-    const [qaList] = await pool.execute(
-      'SELECT * FROM interview_qa WHERE session_id = ? ORDER BY question_index',
+    const { rows: qaList } = await pool.query(
+      'SELECT * FROM interview_qa WHERE session_id = $1 ORDER BY question_index',
       [sessionId]
     );
 

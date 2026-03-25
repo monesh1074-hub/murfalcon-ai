@@ -1,4 +1,4 @@
-// client/src/context/AuthContext.jsx
+// src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import API from '../api/axios';
 
@@ -22,8 +22,8 @@ export function AuthProvider({ children }) {
 
         // Immediately unblock the UI if no session exists at all
         if (!savedToken || !savedUser) {
-           if (isMounted) setLoading(false);
-           return;
+          if (isMounted) setLoading(false);
+          return;
         }
 
         // Apply fast local storage mounting while verifying server-side bounds
@@ -31,12 +31,12 @@ export function AuthProvider({ children }) {
           setToken(savedToken);
           setUser(JSON.parse(savedUser));
         }
-        
+
         API.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
 
         try {
           const res = await API.get('/auth/me', { signal: controller.signal });
-          
+
           if (isMounted) {
             const validUser = res.data.data.user;
             setUser(validUser);
@@ -80,15 +80,15 @@ export function AuthProvider({ children }) {
     try {
       setError(null);
       const res = await API.post('/auth/signup', { fullName, email, password });
-      
+
       if (!res?.data?.data) throw new Error("Invalid response format from server");
-      
+
       const { user: userData, token: newToken } = res.data.data;
 
       setUser(userData);
       setToken(newToken);
       API.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-      
+
       localStorage.setItem('murf_token', newToken);
       localStorage.setItem('murf_user', JSON.stringify(userData));
 
@@ -104,7 +104,7 @@ export function AuthProvider({ children }) {
     try {
       setError(null);
       const res = await API.post('/auth/login', { email, password });
-      
+
       if (!res?.data?.data) throw new Error("Invalid response format from server");
 
       const { user: userData, token: newToken } = res.data.data;
@@ -112,7 +112,7 @@ export function AuthProvider({ children }) {
       setUser(userData);
       setToken(newToken);
       API.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-      
+
       localStorage.setItem('murf_token', newToken);
       localStorage.setItem('murf_user', JSON.stringify(userData));
 
@@ -128,7 +128,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setToken(null);
     setError(null);
-    
+
     delete API.defaults.headers.common['Authorization'];
     localStorage.removeItem('murf_token');
     localStorage.removeItem('murf_user');

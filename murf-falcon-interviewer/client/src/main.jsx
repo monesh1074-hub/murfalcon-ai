@@ -1,4 +1,4 @@
-// client/src/main.jsx
+// src/main.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
@@ -6,7 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
 import './index.css';
 
-// 1. Catches fatal errors so the screen never turns pure white
+// Centralized error bounding prevents pure white screen fatal crashes
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);

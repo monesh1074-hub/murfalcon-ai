@@ -1,4 +1,4 @@
-// client/src/App.jsx
+// src/App.jsx
 import React from 'react';
 import { useApp } from './context/AppContext';
 import { useAuth } from './context/AuthContext';
@@ -9,11 +9,13 @@ import HomeScreen from './components/screens/HomeScreen';
 import SelectionScreen from './components/screens/SelectionScreen';
 import InterviewScreen from './components/screens/InterviewScreen';
 import ScorecardScreen from './components/screens/ScorecardScreen';
+import HistoryScreen from './components/screens/HistoryScreen';
 import LoginScreen from './components/auth/LoginScreen';
 import SignupScreen from './components/auth/SignupScreen';
+import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
-  const { screen, setScreen } = useApp() || {}; 
+  const { screen, setScreen } = useApp() || {};
   const { loading } = useAuth() || { loading: false };
 
   // Fallback to ensuring non-crashing UI bindings directly map cleanly
@@ -21,12 +23,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-violet-500/30 relative flex flex-col overflow-x-hidden">
-      
+
       {/* 
-        Structural DOM anchor: The parent min-h-screen container permanently houses BOTH states.
-        React unmounting algorithms specifically crash ('removeChild' error) when tracking entire massive 
-        DOM hierarchies dynamically swapped immediately alongside API hydration logic. 
-        Overlays ensure 100% stable index mapping against the unmount engine!
+        CRITICAL FIX FOR removeChild ERROR: 
+        We NO LONGER conditionally return a completely different root node when `loading` is true.
+        Instead, the main min-h-screen container ALWAYS remains mounted indefinitely, and we simply overlay 
+        the loading screen. This provides a 100% stable virtual DOM tree to React during Context hydration,
+        making `removeChild` structural mismatch tracking crashes physically impossible!
       */}
       {loading ? (
         <div className="flex-1 w-full bg-zinc-950 flex flex-col items-center justify-center relative mt-auto z-50 overflow-hidden">
@@ -44,6 +47,11 @@ export default function App() {
             {currentScreen === 'selection' && <SelectionScreen />}
             {currentScreen === 'interview' && <InterviewScreen />}
             {currentScreen === 'scorecard' && <ScorecardScreen />}
+            {currentScreen === 'history' && (
+              <ProtectedRoute>
+                <HistoryScreen />
+              </ProtectedRoute>
+            )}
             {currentScreen === 'login' && <LoginScreen onSwitchToSignup={() => setScreen('signup')} />}
             {currentScreen === 'signup' && <SignupScreen onSwitchToLogin={() => setScreen('login')} />}
 

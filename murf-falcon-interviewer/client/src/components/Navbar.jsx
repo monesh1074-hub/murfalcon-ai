@@ -39,6 +39,12 @@ export default function Navbar() {
           >
             PRACTICE
           </button>
+          <button 
+            onClick={() => setScreen && setScreen('history')} 
+            className={`cursor-pointer hover:text-white transition-colors ${screen === 'history' ? 'text-violet-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]' : ''}`}
+          >
+            HISTORY
+          </button>
           <button className="cursor-pointer text-cyan-400 hover:text-cyan-300 transition-colors drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">
             LIVE DEMO
           </button>
@@ -57,7 +63,7 @@ export default function Navbar() {
           {isAuthenticated ? (
             <div className="flex items-center gap-6">
               
-              {/* Premium User Avatar - Extracts first letter dynamically */}
+              {/* Premium User Avatar */}
               <div className="flex items-center gap-3 bg-white/[0.05] border border-white/10 pl-1.5 pr-5 py-1.5 rounded-full backdrop-blur-xl shadow-[0_4px_15px_rgba(0,0,0,0.5)] transition-all hover:bg-white/10 cursor-default">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 via-indigo-600 to-cyan-500 flex items-center justify-center font-black text-sm text-white shadow-[0_0_15px_rgba(168,85,247,0.8)] border border-white/20">
                   {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'M'}
@@ -93,11 +99,11 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* MOBILE MENU DROPDOWN (Responsive Navigation Bounds) */}
+      {/* MOBILE MENU DROPDOWN */}
       <div className={`md:hidden absolute top-[100%] left-0 w-full bg-zinc-950/95 backdrop-blur-3xl border-b border-white/10 overflow-hidden transition-all duration-300 ease-in-out ${mobileMenuOpen ? 'max-h-[500px] opacity-100 border-t border-t-white/5 shadow-2xl' : 'max-h-0 opacity-0 border-transparent'}`}>
         <div className="px-6 py-8 flex flex-col gap-8">
           
-          {/* Mobile Profile Block showing the exact same glowing avatar */}
+          {/* Mobile Profile Block */}
           {isAuthenticated && (
             <div className="flex items-center gap-4 bg-white/5 border border-white/10 p-3 rounded-2xl mb-2 shadow-inner">
                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-600 via-indigo-600 to-cyan-500 flex shrink-0 items-center justify-center font-black text-xl text-white shadow-[0_0_20px_rgba(168,85,247,0.8)] border-2 border-white/20">
@@ -113,6 +119,7 @@ export default function Navbar() {
           <div className="flex flex-col gap-4 text-sm font-black tracking-widest text-zinc-300">
             <button onClick={() => { setScreen('home'); setMobileMenuOpen(false); }} className={`text-left py-3 border-b border-white/5 ${screen === 'home' ? 'text-violet-400' : ''}`}>HOME</button>
             <button onClick={() => { setScreen('selection'); setMobileMenuOpen(false); }} className={`text-left py-3 border-b border-white/5 ${screen === 'selection' ? 'text-violet-400' : ''}`}>PRACTICE</button>
+            <button onClick={() => { setScreen('history'); setMobileMenuOpen(false); }} className={`text-left py-3 border-b border-white/5 ${screen === 'history' ? 'text-violet-400' : ''}`}>HISTORY</button>
             <button onClick={() => setMobileMenuOpen(false)} className="text-left py-3 border-b border-white/5 text-cyan-400">LIVE DEMO</button>
           </div>
           

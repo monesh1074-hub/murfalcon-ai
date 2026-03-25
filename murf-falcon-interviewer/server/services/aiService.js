@@ -17,36 +17,37 @@ if (process.env.OPENAI_API_KEY) {
   openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
 
-// Interview context for AI
-function getSystemPrompt(role, lang) {
+// 1. IMPROVED SYSTEM PROMPT
+// Dynamically adjusts based on role and language to prevent repetitive phrasing
+function getSystemPrompt(role, lang, questionIndex, totalQuestions) {
   const langInstruction =
     lang === 'hi'
-      ? 'Respond in Hindi (Devanagari script). Mix some English technical terms if needed.'
-      : 'Respond in English.';
+      ? 'Respond primarily in natural conversational Hindi (Devanagari script), blending common English technical terms smoothly.'
+      : 'Respond entirely in natural, professional English.';
 
-  return `You are "Falcon", a warm, professional, and intelligent AI interviewer for a ${role} position.
+  const flowInstruction = questionIndex + 1 >= totalQuestions
+      ? 'This is the final interaction. Provide a brief, warm closing statement thanking the candidate for their time.'
+      : 'Start by acknowledging their answer naturally (varying your phrasing—do NOT use repetitive terms like "Solid answer" or "Great"). Then, ask ONE highly relevant, probing follow-up question related to what they just said.';
 
-CRITICAL RULES:
-- ALWAYS respond DIRECTLY to what the candidate just said. Never ignore their message.
-- If they say "hello", "hi", or short greeting → reply warmly like "Hello! Nice to meet you [Name]!" then smoothly ask the first question.
-- Give short encouraging feedback first, then ask ONE relevant follow-up question.
-- Sound like a real human interviewer — natural, friendly, and conversational.
-- Keep replies short (2-4 sentences max).
-- Never use canned phrases like "That's a great question" unless it really fits.
+  return `You are "Falcon", an elite, warm, and highly intelligent AI technical interviewer conducting an interview for the "${role}" position.
 
-${langInstruction}
+CRITICAL BEHAVIORAL RULES:
+1. AVOID CANNED RESPONSES: Never repeatedly say "That's a solid answer", "Great", or "Interesting". Vary your acknowledgments naturally based on the exact context of their reply.
+2. HANDLING GREETINGS: If the candidate says "hello", "hi", or a brief greeting, reply warmly (e.g., "Hello! It's wonderful to meet you. Let's get started.") and immediately ask the first opening question about their background.
+3. CONVERSATIONAL TONE: Speak like a real human director—professional, engaging, and slightly challenging but highly supportive.
+4. LENGTH LIMIT: Keep your responses strictly between 2 to 4 short sentences. Do not monologue.
+5. CONTEXTUAL AWARENESS: Carefully read the conversation history. If their previous answer was weak, gently probe deeper. If it was strong, validate a specific point they made before moving on.
+6. INTERVIEW FLOW: ${flowInstruction}
+7. LANGUAGE: ${langInstruction}
 
-Example for greeting:
-User: hello
-You: Hello Monesh! Nice to meet you. I'm excited to learn about your journey into software development. Shall we begin?
-
-Now start the interview naturally.`;
+Remember: You are evaluating a candidate for the ${role} role. Tailor your technical depth precisely to this position.`;
 }
 
 // Store conversation history per session
 const conversationHistory = new Map();
 
-// Generate AI response
+// 2. IMPROVED GENERATIVE FUNCTION
+// Better history handling and robust fallbacks
 export async function generateAIResponse({
   sessionId,
   role,
@@ -57,42 +58,38 @@ export async function generateAIResponse({
 }) {
   const provider = process.env.AI_PROVIDER || 'gemini';
 
-  // Get or create conversation history
+  // Retrieve or initialize strict session history tracking
   if (!conversationHistory.has(sessionId)) {
     conversationHistory.set(sessionId, []);
   }
   const history = conversationHistory.get(sessionId);
 
-  // Add user message to history
+  // Append user interaction to contextual memory
   history.push({ role: 'user', content: userMessage });
 
-  const systemPrompt = getSystemPrompt(role, lang);
-
-  // Add context about progress
-  const progressContext = `\n\nInterview progress: Question ${questionIndex + 1} of ${totalQuestions}. ${
-    questionIndex + 1 >= totalQuestions
-      ? 'This is the last answer. Wrap up the interview with a brief positive summary.'
-      : 'After your feedback, ask the next relevant follow-up question.'
-  }`;
+  // Generate dynamic system prompt injected with precise progression state
+  const systemPrompt = getSystemPrompt(role, lang, questionIndex, totalQuestions);
 
   try {
     let aiReply = '';
 
+    // Evaluate against available providers
     if (provider === 'gemini' && gemini) {
-      aiReply = await callGemini(systemPrompt + progressContext, history);
+      aiReply = await callGemini(systemPrompt, history);
     } else if (provider === 'openai' && openai) {
-      aiReply = await callOpenAI(systemPrompt + progressContext, history);
+      aiReply = await callOpenAI(systemPrompt, history);
     } else {
-      // Fallback — generate a simple response
-      aiReply = generateFallbackResponse(userMessage, role, questionIndex);
+      // Intentional degraded fallback if API keys are missing completely
+      console.warn("AI configuration missing. Firing dynamic fallback arrays.");
+      aiReply = generateFallbackResponse(userMessage, role, questionIndex, totalQuestions);
     }
 
-    // Add AI response to history
+    // Append AI completion to contextual memory
     history.push({ role: 'assistant', content: aiReply });
 
-    // Keep history manageable (last 20 messages)
-    if (history.length > 20) {
-      history.splice(0, history.length - 20);
+    // Truncate history to preserve token limits (Keeping last 15 messages)
+    if (history.length > 15) {
+      history.splice(0, history.length - 15);
     }
 
     return {
@@ -101,10 +98,10 @@ export async function generateAIResponse({
       provider,
     };
   } catch (error) {
-    console.error('AI Service Error:', error.message);
+    console.error('AI Generation Error:', error.message);
 
-    // Fallback response
-    const fallback = generateFallbackResponse(userMessage, role, questionIndex);
+    // Graceful degraded failure bypass
+    const fallback = generateFallbackResponse(userMessage, role, questionIndex, totalQuestions);
     history.push({ role: 'assistant', content: fallback });
 
     return {
@@ -115,7 +112,7 @@ export async function generateAIResponse({
   }
 }
 
-// Call Google Gemini
+// Call Google Gemini API
 async function callGemini(systemPrompt, history) {
   const formattedHistory = history.map((msg) => ({
     role: msg.role === 'assistant' ? 'model' : 'user',
@@ -123,18 +120,17 @@ async function callGemini(systemPrompt, history) {
   }));
 
   const chat = gemini.startChat({
-    history: formattedHistory.slice(0, -1), // All except last message
-    systemInstruction: systemPrompt,
+    history: formattedHistory.slice(0, -1),
+    systemInstruction: systemPrompt, 
   });
 
   const lastMessage = history[history.length - 1].content;
   const result = await chat.sendMessage(lastMessage);
-  const response = result.response;
-
-  return response.text();
+  
+  return result.response.text();
 }
 
-// Call OpenAI
+// Call OpenAI API
 async function callOpenAI(systemPrompt, history) {
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -147,50 +143,72 @@ async function callOpenAI(systemPrompt, history) {
   const completion = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
     messages,
-    max_tokens: 200,
-    temperature: 0.8,
+    max_tokens: 250,
+    temperature: 0.7,
   });
 
   return completion.choices[0].message.content;
 }
 
-// Fallback when no AI is available
-function generateFallbackResponse(userMessage, role, questionIndex) {
-  const responses = {
+// 3. IMPROVED DYNAMIC FALLBACK SYSTEM
+// Replaces repetitive strings with randomized matrices if the LLM crashes or keys are absent
+function generateFallbackResponse(userMessage, role, questionIndex, totalQuestions) {
+  const lowerMsg = String(userMessage).toLowerCase().trim();
+  const isGreeting = lowerMsg === 'hello' || lowerMsg === 'hi' || lowerMsg.startsWith('hi ') || lowerMsg.startsWith('hello');
+  
+  // Intercept pure greetings instantly
+  if (isGreeting) {
+     const greetings = [
+       `Hello there! It's fantastic to meet you. I'm excited to explore your background for the ${role} position. Ready for the first question?`,
+       `Hi! Thanks for joining me today. We have a lot of ground to cover regarding your fit for the ${role} team. Shall we begin?`,
+       `Welcome! I'm Falcon. I've been looking forward to our chat about the ${role} opportunity. Tell me about your background to kick things off.`
+     ];
+     return greetings[Math.floor(Math.random() * greetings.length)];
+  }
+
+  // Intercept interview completion boundaries
+  if (questionIndex + 1 >= totalQuestions) {
+     return "Thank you for sharing your insights today. This concludes our formal questions. Our team will evaluate your telemetry and follow up shortly!";
+  }
+
+  // Randomized conversational openers to prevent repetition
+  const openers = [
+    "I appreciate that breakdown.",
+    "That makes a lot of sense.",
+    "I see your methodology there.",
+    "Thank you for clarifying your approach.",
+    "That highlights some interesting skills.",
+    "Understood. Let's pivot slightly."
+  ];
+
+  // Role-specific targeted follow-ups
+  const targetedFollowUps = {
     'Software Developer': [
-      "That's a solid answer! Your technical understanding shows. Can you tell me about a time you had to optimize code performance?",
-      "Great explanation! I can see you have hands-on experience. How do you approach learning new technologies?",
-      "Interesting perspective! How do you handle code reviews and feedback from senior developers?",
-      "Good point! Can you walk me through your debugging process when you encounter a tricky bug?",
-      "Excellent! You've shown strong technical skills throughout this interview. Thank you for your time!",
+      "Could you elaborate on how you handle unexpected architectural bottlenecks during deployment?",
+      "Can you describe your specific approach to writing resilient, testable code?",
+      "How do you usually balance technical debt against aggressive product deadlines?",
+      "What is your preferred debugging workflow when facing a severe production outage?"
     ],
-    Marketing: [
-      "Nice approach! Your marketing instincts are sharp. How do you measure ROI on your campaigns?",
-      "That's a creative strategy! How would you handle a campaign that's underperforming?",
-      "Great insight! What tools do you use for analytics and tracking?",
-      "Interesting! How do you stay updated with the latest marketing trends?",
-      "Wonderful answers! You clearly have a passion for marketing. Thank you for this interview!",
-    ],
-    HR: [
-      "That shows great people skills! How do you handle a situation where two employees have a conflict?",
-      "Good approach! What's your strategy for retaining top talent?",
-      "Thoughtful answer! How do you ensure diversity and inclusion in hiring?",
-      "Nice! How do you measure employee satisfaction and engagement?",
-      "Great responses throughout! Your HR knowledge is impressive. Thank you!",
+    'Marketing': [
+      "How do you accurately track attribution across multi-channel campaigns?",
+      "Tell me about a time a campaign completely missed its KPIs. How did you pivot?",
+      "What analytics frameworks do you rely on most heavily for audience segmentation?"
     ],
     'Startup Founder': [
-      "Bold vision! How do you plan to differentiate from competitors?",
-      "Smart strategy! What's your approach to building the initial team?",
-      "Interesting! How would you handle running out of runway?",
-      "Good thinking! What metrics are you tracking for product-market fit?",
-      "Impressive vision and execution plan! Thank you for sharing your startup journey!",
-    ],
+      "How do you prioritize your roadmap when resources are critically constrained?",
+      "Can you explain your philosophy on establishing an early-stage company culture?",
+      "What is your strategy for maintaining runway during unpredictable market cycle shifts?"
+    ]
   };
 
-  const roleResponses = responses[role] || responses['Software Developer'];
-  const index = Math.min(questionIndex, roleResponses.length - 1);
+  const selectedOpener = openers[Math.floor(Math.random() * openers.length)];
+  const followUpArray = targetedFollowUps[role] || targetedFollowUps['Software Developer'];
+  
+  // Safely index the questions to ensure they don't overflow the array
+  const safeIndex = questionIndex % followUpArray.length;
+  const selectedFollowUp = followUpArray[safeIndex];
 
-  return roleResponses[index];
+  return `${selectedOpener} ${selectedFollowUp}`;
 }
 
 // Clear session history
@@ -212,27 +230,21 @@ export async function generateInterviewScore(sessionId, role) {
       confidence: 7.0,
       clarity: 7.5,
       technical: 7.0,
-      tips: 'Practice more to get a detailed assessment!',
+      tips: 'Practice speaking more extensively to generate a detailed assessment payload!',
     };
   }
 
   const provider = process.env.AI_PROVIDER || 'gemini';
 
   try {
-    const scoringPrompt = `You are an interview scoring AI. 
-Analyze these interview answers for a ${role} position and provide scores.
+    const scoringPrompt = `You are a strict but fair AI evaluator. 
+Analyze these candidate responses for the ${role} position and generate quantitative metrics.
 
-Candidate's answers:
+Candidate Transcript:
 ${userAnswers.map((a, i) => `Answer ${i + 1}: "${a}"`).join('\n')}
 
-Respond ONLY in this exact JSON format (no markdown, no extra text):
-{"overall":85,"confidence":8.5,"clarity":8.0,"technical":7.5,"tips":"Your specific feedback here in 2 sentences."}
-
-Score rules:
-- overall: 0-100
-- confidence, clarity, technical: 0.0-10.0
-- Be fair but encouraging
-- Give specific actionable tips`;
+Format your response EXACTLY as this strict JSON string (no markdown ticks or extra formatting, just the raw object):
+{"overall":85,"confidence":8.5,"clarity":8.0,"technical":7.5,"tips":"Your precise, actionable feedback here."}`;
 
     let scoreText = '';
 
@@ -248,7 +260,7 @@ Score rules:
       scoreText = completion.choices[0].message.content;
     }
 
-    // Parse JSON from response
+    // Safely extract the JSON payload
     const jsonMatch = scoreText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const scores = JSON.parse(jsonMatch[0]);
@@ -257,20 +269,20 @@ Score rules:
         confidence: Math.min(10, Math.max(0, scores.confidence || 7.0)),
         clarity: Math.min(10, Math.max(0, scores.clarity || 7.5)),
         technical: Math.min(10, Math.max(0, scores.technical || 7.0)),
-        tips: scores.tips || 'Great effort! Keep practicing.',
+        tips: scores.tips || 'Excellent effort. Keep practicing your delivery.',
       };
     }
   } catch (error) {
-    console.error('Scoring error:', error.message);
+    console.error('Error securely generating intelligence evaluation metrics:', error.message);
   }
 
-  // Fallback scores
+  // Graceful degradation scoring algorithm
   const base = 70 + Math.floor(Math.random() * 20);
   return {
     overall: base,
     confidence: ((base - 5 + Math.random() * 10) / 10).toFixed(1),
     clarity: ((base + Math.random() * 10) / 10).toFixed(1),
     technical: ((base - 10 + Math.random() * 15) / 10).toFixed(1),
-    tips: 'Good job! Try adding more specific examples from your experience next time.',
+    tips: 'Good job overall! To improve, try incorporating more structured, specific examples detailing your direct impact from past experiences.',
   };
 }

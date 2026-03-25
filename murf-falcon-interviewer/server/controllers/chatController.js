@@ -35,18 +35,19 @@ export async function getChatReply(req, res, next) {
 
     // Step 3: Save Q&A to database (if session exists)
    // Save only if it's a real numeric session ID from /interview/start
-if (sessionId && !isNaN(parseInt(sessionId))) {
+// Save only if it's a real numeric session ID from /interview/start
+if (sessionId && !String(sessionId).startsWith('temp_')) {
   try {
     // Save user's answer
-    await pool.execute(
-      'INSERT INTO interview_qa (session_id, question_index, question_text, answer_text, confidence_score) VALUES (?, ?, ?, ?, ?)',
-      [sessionId, questionIndex || 0, 'AI Follow-up', userMessage, 7.5]
+    await pool.query(
+      'INSERT INTO interview_qa (session_id, question_index, question_text, answer_text, confidence_score) VALUES ($1, $2, $3, $4, $5)',
+      [sessionId, questionIndex || 0, 'User Response', userMessage, 7.5]
     );
 
     // Log Murf voice
     if (voiceResult.success) {
-      await pool.execute(
-        'INSERT INTO murf_voice_logs (user_id, session_id, input_text, voice_id, audio_url, latency_ms) VALUES (?, ?, ?, ?, ?, ?)',
+      await pool.query(
+        'INSERT INTO murf_voice_logs (user_id, session_id, input_text, voice_id, audio_url, latency_ms) VALUES ($1, $2, $3, $4, $5, $6)',
         [userId, sessionId, aiResult.reply, voiceResult.voiceId || 'fallback', voiceResult.audioUrl || null, voiceResult.latencyMs || 0]
       );
     }
@@ -88,17 +89,17 @@ export async function getInterviewScore(req, res, next) {
     );
 
     // Save scores to database
-    if (sessionId) {
+    if (sessionId && !String(sessionId).startsWith('temp_')) {
       try {
-        await pool.execute(
+        await pool.query(
           `UPDATE interview_sessions 
            SET status = 'completed',
-               overall_score = ?,
-               confidence_score = ?,
-               clarity_score = ?,
-               technical_score = ?,
+               overall_score = $1,
+               confidence_score = $2,
+               clarity_score = $3,
+               technical_score = $4,
                completed_at = NOW()
-           WHERE id = ? AND user_id = ?`,
+           WHERE id = $5 AND user_id = $6`,
           [
             scores.overall,
             scores.confidence,
