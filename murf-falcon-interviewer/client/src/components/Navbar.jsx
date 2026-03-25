@@ -57,7 +57,7 @@ export default function Navbar() {
             className="w-10 h-10 rounded-full border border-white/10 hover:border-violet-500 hover:bg-violet-500/10 flex items-center justify-center text-xs font-bold tracking-widest transition-all"
             title="Toggle Language"
           >
-            {currentLang === 'en' ? 'EN' : 'HI'}
+            {currentLang === 'en' ? 'EN' : 'हिं'}
           </button>
           
           {isAuthenticated ? (
@@ -125,7 +125,7 @@ export default function Navbar() {
           
           <div className="flex items-center justify-between pt-2">
             <button onClick={toggleLanguage} className="text-[10px] font-black tracking-widest border border-white/20 px-5 py-2.5 rounded-full hover:bg-white/10">
-              LANG: {currentLang === 'en' ? 'ENGLISH' : 'HINDI'}
+              LANG: {currentLang === 'en' ? 'ENGLISH' : 'हिंदी'}
             </button>
             {isAuthenticated ? (
               <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="text-[10px] font-black tracking-widest text-red-400 bg-red-500/10 px-6 py-2.5 rounded-full border border-red-500/30">LOGOUT</button>

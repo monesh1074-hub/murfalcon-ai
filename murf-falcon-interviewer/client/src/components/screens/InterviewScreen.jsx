@@ -41,16 +41,49 @@ export default function InterviewScreen() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const t = currentLang === 'hi' ? {
+    welcome: `नमस्ते ${user?.fullName || 'उम्मीदवार'}! मैं फाल्कन हूं, ${currentRole} भूमिका के लिए आपका एआई साक्षात्कारकर्ता। चलिए शुरू करते हैं।`,
+    progress: "साक्षात्कार प्रगति",
+    mission: "लक्ष्य प्राप्त",
+    targetPrompt: "अगला प्रश्न",
+    fallbackQ: "क्या आप इसके बारे में और विस्तार से बता सकते हैं?",
+    processing: "प्रसंस्करण",
+    transmitting: "संचारण",
+    listening: "सुन रहा हूँ...",
+    idle: "सिस्टम तैयार",
+    pressToSpeak: "बोलने के लिए दबाएं",
+    clickToStop: "रोकने के लिए क्लिक करें",
+    telemetryTitle: "एआई टेलीमेट्री",
+    feedbackTitle: "फाल्कन फीडबैक",
+    standbyFeedback: "सिस्टम तैयार। विश्लेषण ओवरले उत्पन्न करने के लिए मुखर इनपुट की आवश्यकता है।",
+    errorFeedback: "❌ कनेक्शन त्रुटि। कृपया फिर से बोलने का प्रयास करें।"
+  } : {
+    welcome: `Hello ${user?.fullName || 'there'}! I am Falcon, your AI interviewer for the ${currentRole} role. Let's begin.`,
+    progress: "INTERVIEW PROGRESS",
+    mission: "Mission Accomplished",
+    targetPrompt: "Target Prompt",
+    fallbackQ: "Could you describe that further?",
+    processing: "PROCESSING",
+    transmitting: "TRANSMITTING",
+    listening: "Listening...",
+    idle: "System Idle",
+    pressToSpeak: "Press to Speak",
+    clickToStop: "Click to Stop",
+    telemetryTitle: "Telemetry Feed",
+    feedbackTitle: "FALCON FEEDBACK",
+    standbyFeedback: "Standing by. System requires vocal pattern input to generate analysis overlay.",
+    errorFeedback: "❌ Connection Error. Please try speaking again."
+  };
+
   // Bootup sequence
   useEffect(() => {
     if (hasStartedRef.current) return;
     hasStartedRef.current = true;
 
     const startSequence = async () => {
-      const welcome = `Hello ${user?.fullName || 'there'}! I am Falcon, your AI interviewer for the ${currentRole} role. Let's begin.`;
-      addMessage(welcome, true);
+      addMessage(t.welcome, true);
 
-      if (chat.speakWithMurf) chat.speakWithMurf(welcome, currentVoice);
+      if (chat.speakWithMurf) chat.speakWithMurf(t.welcome, currentVoice);
 
       setTimeout(() => {
         if (questions && questions[0]) {
@@ -95,7 +128,7 @@ export default function InterviewScreen() {
 
       if (nextIdx < totalQs) {
         setTimeout(() => {
-          const nextQ = questions[nextIdx] || "Could you describe that further?";
+          const nextQ = questions[nextIdx] || t.fallbackQ;
           addMessage(nextQ, true);
           addTranscript(nextQ, false);
           if (chat.speakWithMurf) chat.speakWithMurf(nextQ, currentVoice);
@@ -108,7 +141,7 @@ export default function InterviewScreen() {
         endInterview();
       }
     } else {
-      setFeedbackText('❌ Connection Error. Please try speaking again.');
+      setFeedbackText(t.errorFeedback);
     }
   }, [currentRole, currentLang, questions, currentQuestionIndex, addMessage, addTranscript, setFeedbackText, advanceQuestion, endInterview, chat, setScores, sessionId]);
 
@@ -153,7 +186,7 @@ export default function InterviewScreen() {
         <div className="w-full xl:w-[340px] bg-white/[0.02] border border-white/10 rounded-[40px] p-8 md:p-10 flex flex-col relative backdrop-blur-2xl shrink-0 shadow-2xl h-[280px] xl:h-[calc(100vh-150px)] overflow-hidden">
           <div className="absolute -top-32 -left-32 w-80 h-80 bg-violet-600/10 blur-[80px] pointer-events-none" />
 
-          <div className="text-[10px] font-black tracking-[0.25em] text-violet-400 mb-4 relative z-10 drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]">INTERVIEW PROGRESS</div>
+          <div className="text-[10px] font-black tracking-[0.25em] text-violet-400 mb-4 relative z-10 drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]">{t.progress}</div>
           <div className="text-4xl md:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-zinc-600 relative z-10 mb-6 drop-shadow-sm flex items-baseline gap-1">
             {currentStep}<span className="text-2xl md:text-3xl lg:text-4xl text-zinc-700 font-bold">/{totalQuestions}</span>
           </div>
@@ -194,7 +227,7 @@ export default function InterviewScreen() {
             </div>
             {(isThinking || chat.isSpeakingMurf) && (
               <div className="text-[10px] md:text-xs font-mono font-bold text-cyan-400 animate-pulse bg-cyan-900/20 px-3 md:px-4 py-1.5 rounded-full border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.3)] shrink-0">
-                <span className="mr-2 animate-spin inline-block">⏳</span> {isThinking ? 'PROCESSING' : 'TRANSMITTING'}
+                <span className="mr-2 animate-spin inline-block">⏳</span> {isThinking ? t.processing : t.transmitting}
               </div>
             )}
           </div>
@@ -207,10 +240,10 @@ export default function InterviewScreen() {
               </div>
               <div className="flex-1">
                 <div className="text-[10px] font-black tracking-[0.2em] text-zinc-500 mb-1.5 uppercase">
-                  Target Prompt - {currentStep}/{totalQuestions}
+                  {t.targetPrompt} - {currentStep}/{totalQuestions}
                 </div>
                 <p className="text-white text-[15px] md:text-[17px] leading-relaxed font-medium pt-1">
-                  {questions[currentQuestionIndex] || "Tell me about yourself and your overall experience."}
+                  {questions[currentQuestionIndex] || t.fallbackQ}
                 </p>
               </div>
             </div>
@@ -286,10 +319,10 @@ export default function InterviewScreen() {
 
               <div className="mt-5 flex flex-col items-center gap-1.5 bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-xl shadow-lg">
                 <span className={`text-[11px] md:text-[12px] font-black uppercase tracking-[0.3em] transition-colors ${isListening ? 'text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)] animate-pulse' : 'text-zinc-400'}`}>
-                  {isListening ? 'Listening...' : 'System Idle'}
+                  {isListening ? t.listening : t.idle}
                 </span>
                 <span className="text-[9px] md:text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                  {isListening ? 'Click to Stop' : 'Press to Speak'}
+                  {isListening ? t.clickToStop : t.pressToSpeak}
                 </span>
               </div>
             </div>
@@ -301,7 +334,7 @@ export default function InterviewScreen() {
         <div className="w-full xl:w-[340px] bg-white/[0.02] border border-white/10 rounded-[40px] p-8 md:p-10 flex flex-col relative overflow-hidden backdrop-blur-2xl shrink-0 shadow-2xl h-[450px] xl:h-[calc(100vh-150px)]">
           <div className="absolute -top-32 -right-32 w-80 h-80 bg-cyan-600/10 blur-[80px] pointer-events-none" />
 
-          <div className="text-[10px] font-black tracking-[0.25em] text-cyan-400 mb-8 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] uppercase">Telemetry Feed</div>
+          <div className="text-[10px] font-black tracking-[0.25em] text-cyan-400 mb-8 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] uppercase">{t.telemetryTitle}</div>
 
           <div className="flex-1 w-full overflow-y-auto pb-10 scrollbar-hide flex flex-col min-h-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <div className="mb-8 p-5 md:p-6 bg-black/60 rounded-3xl border border-white/5 shadow-[inset_0_5px_20px_rgba(0,0,0,0.5)] shrink-0 relative z-10">
@@ -327,9 +360,9 @@ export default function InterviewScreen() {
 
             <div className="mt-auto bg-gradient-to-br from-violet-900/30 to-zinc-950 rounded-[28px] p-6 md:p-8 border border-violet-500/20 relative shadow-[inset_0_0_30px_rgba(168,85,247,0.05)] shrink-0 z-10">
               <div className="absolute -top-4 -right-4 w-16 h-16 bg-violet-600/20 blur-[20px] rounded-full pointer-events-none" />
-              <div className="text-[10px] font-black tracking-[0.25em] text-violet-400 mb-3 drop-shadow-sm">FALCON FEEDBACK</div>
+              <div className="text-[10px] font-black tracking-[0.25em] text-violet-400 mb-3 drop-shadow-sm">{t.feedbackTitle}</div>
               <p className="text-xs md:text-sm text-zinc-300 leading-relaxed font-light">
-                {feedbackText || "Standing by. System requires vocal pattern input to generate analysis overlay."}
+                {feedbackText || t.standbyFeedback}
               </p>
             </div>
           </div>

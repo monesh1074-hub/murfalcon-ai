@@ -54,7 +54,10 @@ export function AppProvider({ children }) {
   }, [showToast]);
 
   const startInterview = useCallback(async (role, voice) => {
-    const qs = questionBanks[role] || ['Tell me about yourself.'];
+    // Gracefully handle nested data maps and dynamically translate
+    const localeBank = questionBanks[currentLang] || questionBanks['en'];
+    const qs = localeBank[role] || localeBank['Software Developer'] || ['Tell me about yourself.'];
+    
     setCurrentRole(role);
     if (voice) setCurrentVoice(voice);
     setQuestions(qs);

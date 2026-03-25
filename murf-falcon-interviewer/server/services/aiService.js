@@ -81,7 +81,7 @@ export async function generateAIResponse({
     } else {
       // Intentional degraded fallback if API keys are missing completely
       console.warn("AI configuration missing. Firing dynamic fallback arrays.");
-      aiReply = generateFallbackResponse(userMessage, role, questionIndex, totalQuestions);
+      aiReply = generateFallbackResponse(userMessage, role, questionIndex, totalQuestions, lang);
     }
 
     // Append AI completion to contextual memory
@@ -101,7 +101,7 @@ export async function generateAIResponse({
     console.error('AI Generation Error:', error.message);
 
     // Graceful degraded failure bypass
-    const fallback = generateFallbackResponse(userMessage, role, questionIndex, totalQuestions);
+    const fallback = generateFallbackResponse(userMessage, role, questionIndex, totalQuestions, lang);
     history.push({ role: 'assistant', content: fallback });
 
     return {
@@ -152,13 +152,17 @@ async function callOpenAI(systemPrompt, history) {
 
 // 3. IMPROVED DYNAMIC FALLBACK SYSTEM
 // Replaces repetitive strings with randomized matrices if the LLM crashes or keys are absent
-function generateFallbackResponse(userMessage, role, questionIndex, totalQuestions) {
+function generateFallbackResponse(userMessage, role, questionIndex, totalQuestions, lang = 'en') {
   const lowerMsg = String(userMessage).toLowerCase().trim();
   const isGreeting = lowerMsg === 'hello' || lowerMsg === 'hi' || lowerMsg.startsWith('hi ') || lowerMsg.startsWith('hello');
 
   // Intercept pure greetings instantly
   if (isGreeting) {
-    const greetings = [
+    const greetings = lang === 'hi' ? [
+      `नमस्ते! आपसे मिलकर बहुत अच्छा लगा। मैं ${role} भूमिका के लिए आपकी पृष्ठभूमि जानने के लिए उत्सुक हूं। क्या आप अपनी पहली प्रतिक्रिया के लिए तैयार हैं?`,
+      `नमस्ते! आज मेरे साथ जुड़ने के लिए धन्यवाद। हमारे पास ${role} टीम के लिए बहुत कुछ कवर करने के लिए है। क्या हम शुरू करें?`,
+      `आपका स्वागत है! मैं फाल्कन हूँ। आइए आपके बारे में जानना शुरू करें।`
+    ] : [
       `Hello there! It's fantastic to meet you. I'm excited to explore your background for the ${role} position. Ready for the first question?`,
       `Hi! Thanks for joining me today. We have a lot of ground to cover regarding your fit for the ${role} team. Shall we begin?`,
       `Welcome! I'm Falcon. I've been looking forward to our chat about the ${role} opportunity. Tell me about your background to kick things off.`
@@ -168,11 +172,20 @@ function generateFallbackResponse(userMessage, role, questionIndex, totalQuestio
 
   // Intercept interview completion boundaries
   if (questionIndex + 1 >= totalQuestions) {
-    return "Thank you for sharing your insights today. This concludes our formal questions. Our team will evaluate your telemetry and follow up shortly!";
+    return lang === 'hi' 
+      ? "आज अपने विचार साझा करने के लिए धन्यवाद। यहाँ हमारे औपचारिक प्रश्न समाप्त होते हैं। हमारी टीम जल्द ही आपका मूल्यांकन करेगी!"
+      : "Thank you for sharing your insights today. This concludes our formal questions. Our team will evaluate your telemetry and follow up shortly!";
   }
 
   // Randomized conversational openers to prevent repetition
-  const openers = [
+  const openers = lang === 'hi' ? [
+    "मैं आपकी बात समझता हूँ।",
+    "यह बहुत ही तार्किक है।",
+    "मुझे आपका दृष्टिकोण समझ आ रहा है।",
+    "स्पष्ट करने के लिए धन्यवाद।",
+    "यह कुछ दिलचस्प कौशल को उजागर करता है।",
+    "समझ गया। चलिए विषय वस्तु बदलते हैं।"
+  ] : [
     "I appreciate that breakdown.",
     "That makes a lot of sense.",
     "I see your methodology there.",
@@ -182,7 +195,24 @@ function generateFallbackResponse(userMessage, role, questionIndex, totalQuestio
   ];
 
   // Role-specific targeted follow-ups
-  const targetedFollowUps = {
+  const targetedFollowUps = lang === 'hi' ? {
+    'Software Developer': [
+      "आप कोड लिखते समय आने वाली समस्याओं को कैसे संभालते हैं?",
+      "क्या आप मजबूत, परीक्षण योग्य कोड लिखने के अपने तरीके का वर्णन कर सकते हैं?",
+      "आप उत्पाद की समय सीमा के दबाव में तकनीकी ऋण (technical debt) को कैसे संतुलित करते हैं?",
+      "गंभीर सिस्टम विफलता का सामना करते समय आप प्राथमिकता कैसे तय करते हैं?"
+    ],
+    'Marketing': [
+      "आप कई चैनलों पर विपणन अभियान को कैसे ट्रैक करते हैं?",
+      "उस समय के बारे में बताएं जब कोई अभियान पूरी तरह विफल हो गया। आपने कैसे प्रतिक्रिया दी?",
+      "श्रोताओं को लक्षित करने के लिए आप किस मेट्रिक्स पर भरोसा करते हैं?"
+    ],
+    'Startup Founder': [
+      "जब संसाधन गंभीर रूप से सीमित हों तो आप अपनी योजनाओं को कैसे प्राथमिकता देते हैं?",
+      "प्रारंभिक चरण वाली कंपनी की संस्कृति स्थापित करने पर आपकी क्या राय है?",
+      "बाजार में गिरावट के दौरान कंपनी को सुरक्षित रखने की आपकी रणनीति क्या है?"
+    ]
+  } : {
     'Software Developer': [
       "Could you elaborate on how you handle unexpected architectural bottlenecks during deployment?",
       "Can you describe your specific approach to writing resilient, testable code?",
