@@ -28,8 +28,8 @@ const User = {
 
   // Find user by ID
   async findById(id) {
-    const [users] = await pool.execute(
-      'SELECT id, full_name, email, preferred_lang, avatar_url, created_at FROM users WHERE id = ?',
+    const { rows: users } = await pool.query(
+      'SELECT id, full_name, email, preferred_lang, avatar_url, created_at FROM users WHERE id = $1',
       [id]
     );
     return users[0] || null;

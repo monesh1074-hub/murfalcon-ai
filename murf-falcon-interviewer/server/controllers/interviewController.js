@@ -28,6 +28,17 @@ const { rows: [result] } = await pool.query(
 export async function saveAnswer(req, res, next) {
   try {
     const { sessionId, questionIndex, questionText, answerText, confidenceScore } = req.body;
+    const userId = req.user.id;
+
+    // Secure authorization: Validate session absolute ownership before insertion
+    const sessionCheck = await pool.query(
+      'SELECT id FROM interview_sessions WHERE id = $1 AND user_id = $2', 
+      [sessionId, userId]
+    );
+
+    if (sessionCheck.rows.length === 0) {
+      return res.status(403).json({ success: false, message: 'Unauthorized session access.' });
+    }
 
     await pool.query(
       'INSERT INTO interview_qa (session_id, question_index, question_text, answer_text, confidence_score) VALUES ($1, $2, $3, $4, $5)',
